@@ -20,7 +20,7 @@
 7. [Migrations](#migrations)
 8. [API Reference](#api-reference)
 9. [Variables de entorno](#variables-de-entorno)
-10. [Correr en local](#correr-en-local)
+10. [Guía rápida para levantar el proyecto](#guía-rápida-para-levantar-el-proyecto)
 11. [Docker](#docker)
 12. [Deploy en DigitalOcean](#deploy-en-digitalocean)
 13. [Ramas de Git](#ramas-de-git)
@@ -692,77 +692,257 @@ ANTHROPIC_API_KEY=sk-ant-api03-...
 
 ---
 
-## Correr en local
+## ⚡ Guía rápida para levantar el proyecto
 
-### Requisitos
+> Sigue estos pasos en orden. Cada paso depende del anterior.
 
-- Node.js 20+
-- Docker y Docker Compose (para PostgreSQL local)
-- App en Discord Developer Portal
-- API Key de Anthropic
+---
 
-### Pasos
+### Requisitos previos
+
+Antes de empezar verifica que tienes instalado:
 
 ```bash
-# 1. Clonar el repo
+node --version    # debe mostrar v20.x.x o superior
+npm --version     # debe mostrar 9.x.x o superior
+docker --version  # debe mostrar Docker version 24.x.x o superior
+nest --version    # debe mostrar 10.x.x — si no: sudo npm i -g @nestjs/cli
+```
+
+Si algo falta:
+- **Node.js 20:** https://nodejs.org → descargar versión LTS
+- **Docker:** https://docs.docker.com/get-docker
+- **NestJS CLI:** `sudo npm i -g @nestjs/cli`
+
+---
+
+### Paso 1 — Clonar el repositorio
+
+```bash
 git clone https://github.com/tu-equipo/codequest-backend.git
 cd codequest-backend
+```
 
-# 2. Instalar dependencias
+---
+
+### Paso 2 — Instalar dependencias
+
+```bash
 npm install
+```
 
-# 3. Configurar entorno
+> ⏳ Tarda ~1 minuto la primera vez. Al terminar verás `added X packages`.
+
+---
+
+### Paso 3 — Configurar variables de entorno
+
+```bash
+# Copiar la plantilla
 cp .env.example .env
-# Editar .env con tus credenciales
+```
 
-# 4. Levantar PostgreSQL local con Docker
+Ahora abre el archivo `.env` y rellena cada variable:
+
+```bash
+# Abrir con VS Code
+code .env
+
+# O con nano en la terminal
+nano .env
+```
+
+**Variables que DEBES rellenar para desarrollo local:**
+
+| Variable | Dónde obtenerla |
+|----------|----------------|
+| `DATABASE_URL` | Se genera automáticamente con Docker (ver Paso 4) |
+| `JWT_SECRET` | Correr: `openssl rand -base64 64` |
+| `DISCORD_CLIENT_ID` | discord.com/developers/applications → tu app → OAuth2 |
+| `DISCORD_CLIENT_SECRET` | discord.com/developers/applications → tu app → OAuth2 |
+| `DISCORD_CALLBACK_URL` | Dejar como: `http://localhost:3000/api/v1/auth/discord/callback` |
+| `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys |
+
+**Ejemplo de `.env` para desarrollo local:**
+```bash
+PORT=3000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:5173
+
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/codequest
+
+JWT_SECRET=mi-clave-super-secreta-de-al-menos-64-caracteres-aqui
+JWT_EXPIRES_IN=7d
+
+DISCORD_CLIENT_ID=123456789012345678
+DISCORD_CLIENT_SECRET=AbCdEfGhIjKlMnOpQrStUvWxYz123456
+DISCORD_CALLBACK_URL=http://localhost:3000/api/v1/auth/discord/callback
+DEVTALLES_GUILD_ID=1130900724499365958
+
+ANTHROPIC_API_KEY=sk-ant-api03-...
+```
+
+---
+
+### Paso 4 — Levantar PostgreSQL con Docker
+
+```bash
+# Levantar solo la base de datos en segundo plano
 docker compose up -d postgres
+```
 
-# 5. Ejecutar migrations (crea las tablas)
+Verificar que está corriendo:
+```bash
+docker ps
+# Debe mostrar: codequest-db   Up X seconds
+```
+
+> 💡 La primera vez descarga la imagen de PostgreSQL (~80MB). Las siguientes veces es instantáneo.
+
+---
+
+### Paso 5 — Agregar scripts de migrations al package.json
+
+Antes de correr las migrations, verifica que el `package.json` tiene estos scripts.
+Si no están, agrégalos en la sección `"scripts"`:
+
+```json
+"migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/data-source.ts",
+"migration:run":      "typeorm-ts-node-commonjs migration:run -d src/config/data-source.ts",
+"migration:revert":   "typeorm-ts-node-commonjs migration:revert -d src/config/data-source.ts",
+"migration:show":     "typeorm-ts-node-commonjs migration:show -d src/config/data-source.ts"
+```
+
+---
+
+### Paso 6 — Ejecutar las migrations
+
+```bash
+# Crea todas las tablas en la base de datos
 npm run migration:run
+```
 
-# 6. Correr en modo desarrollo
+Debes ver algo como:
+```
+Running migrations...
+Migration CreateProfiles has been executed successfully.
+Migration CreateCourses has been executed successfully.
+Migration CreateAssessments has been executed successfully.
+Migration CreateLearningPaths has been executed successfully.
+Migration CreateUserProgress has been executed successfully.
+Migration SeedCourses has been executed successfully.
+```
+
+Si hay error de conexión, verifica que Docker está corriendo (`docker ps`).
+
+---
+
+### Paso 7 — Iniciar el servidor en modo desarrollo
+
+```bash
 npm run start:dev
 ```
 
+Debes ver:
 ```
-API disponible en:  http://localhost:3000/api/v1
-Swagger docs en:    http://localhost:3000/docs
-```
-
-### docker-compose.yml (desarrollo local)
-
-```yaml
-version: '3.8'
-services:
-  postgres:
-    image: postgres:17-alpine
-    container_name: codequest-db
-    ports:
-      - '5432:5432'
-    environment:
-      POSTGRES_DB: codequest
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  backend:
-    build: .
-    container_name: codequest-backend
-    ports:
-      - '3000:3000'
-    env_file: .env
-    depends_on:
-      - postgres
-
-volumes:
-  postgres_data:
+[Nest] LOG  Starting Nest application...
+[Nest] LOG  AppModule dependencies initialized
+[Nest] LOG  AuthModule dependencies initialized
+[Nest] LOG  CoursesModule dependencies initialized
+[Nest] LOG  Nest application successfully started +Xms
 ```
 
-Con esto, la `DATABASE_URL` local sería:
+---
+
+### Paso 8 — Verificar que todo funciona
+
+Abre el navegador y ve a:
+
 ```
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/codequest
+http://localhost:3000/api/v1/docs
+```
+
+Debes ver la documentación **Swagger UI** con todos los endpoints del proyecto.
+
+Prueba el endpoint de salud:
+```bash
+curl http://localhost:3000/api/v1/health
+# Respuesta: { "status": "ok" }
+```
+
+---
+
+### Paso 9 — Configurar Discord OAuth2 (para probar el login)
+
+1. Ir a [discord.com/developers/applications](https://discord.com/developers/applications)
+2. Seleccionar tu aplicación → **OAuth2** → **Redirects**
+3. Agregar: `http://localhost:3000/api/v1/auth/discord/callback`
+4. Guardar cambios
+5. Probar en el navegador: `http://localhost:3000/api/v1/auth/discord`
+
+---
+
+### Comandos útiles del día a día
+
+```bash
+# Iniciar servidor con hot-reload
+npm run start:dev
+
+# Detener PostgreSQL
+docker compose down
+
+# Ver logs de PostgreSQL
+docker compose logs -f postgres
+
+# Revertir última migration
+npm run migration:revert
+
+# Ver estado de migrations
+npm run migration:show
+
+# Compilar para producción
+npm run build
+
+# Verificar tipos TypeScript sin compilar
+npx tsc --noEmit
+```
+
+---
+
+### Solución de problemas comunes
+
+**❌ Error: `connect ECONNREFUSED 127.0.0.1:5432`**
+```bash
+# PostgreSQL no está corriendo
+docker compose up -d postgres
+docker ps  # verificar que aparece codequest-db
+```
+
+**❌ Error: `Cannot find module '@nestjs/config'`**
+```bash
+# Faltan dependencias
+npm install
+```
+
+**❌ Error: `JWT_SECRET is not defined`**
+```bash
+# Falta el archivo .env
+cp .env.example .env
+# Luego rellenar las variables
+```
+
+**❌ Error en Discord callback: `redirect_uri_mismatch`**
+```
+Verificar que en Discord Developer Portal el redirect URL sea exactamente:
+http://localhost:3000/api/v1/auth/discord/callback
+(sin slash al final, con /api/v1)
+```
+
+**❌ Error: `Migration not found`**
+```bash
+# Compilar primero y luego correr migrations
+npm run build
+npm run migration:run
 ```
 
 ---
