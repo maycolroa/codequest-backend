@@ -42,18 +42,18 @@ El backend expone una API REST que permite:
 
 ## Stack tecnológico
 
-| Capa | Tecnología | Versión |
-|------|-----------|---------|
-| Runtime | Node.js | 20 LTS |
-| Framework | NestJS | 10 |
-| Lenguaje | TypeScript | 5.1 |
-| ORM | TypeORM | 0.3.x |
-| Base de datos | PostgreSQL (DigitalOcean Managed) | 17 |
-| Autenticación | Discord OAuth2 + JWT | — |
-| IA | Anthropic Claude API | claude-sonnet-4-6 |
-| Contenedores | Docker + Docker Compose | 24+ |
-| Deploy | DigitalOcean App Platform | — |
-| Documentación | Swagger (OpenAPI 3.0) | — |
+| Capa           | Tecnología                       | Versión          |
+| -------------- | --------------------------------- | ----------------- |
+| Runtime        | Node.js                           | 20 LTS            |
+| Framework      | NestJS                            | 10                |
+| Lenguaje       | TypeScript                        | 5.1               |
+| ORM            | TypeORM                           | 0.3.x             |
+| Base de datos  | PostgreSQL (DigitalOcean Managed) | 17                |
+| Autenticación | Discord OAuth2 + JWT              | —                |
+| IA             | Anthropic Claude API              | claude-sonnet-4-6 |
+| Contenedores   | Docker + Docker Compose           | 24+               |
+| Deploy         | DigitalOcean App Platform         | —                |
+| Documentación | Swagger (OpenAPI 3.0)             | —                |
 
 ---
 
@@ -186,6 +186,7 @@ AuthModule
 ```
 
 **Flujo de autenticación:**
+
 ```
 1. GET /auth/discord         → Passport redirige a discord.com/oauth2
 2. Discord devuelve code     → Callback en /auth/discord/callback
@@ -217,6 +218,7 @@ CoursesModule
 ```
 
 **Ejemplo con TypeORM QueryBuilder:**
+
 ```typescript
 findAll(filters?: { category?: string; level?: string }) {
   const qb = this.coursesRepo.createQueryBuilder('course')
@@ -248,6 +250,7 @@ AssessmentsModule
 ```
 
 **DTO:**
+
 ```typescript
 class CreateAssessmentDto {
   @IsArray()
@@ -307,6 +310,7 @@ AiModule
 ```
 
 **Respuesta esperada de Claude:**
+
 ```json
 {
   "title": "Tu ruta hacia Fullstack JavaScript",
@@ -629,35 +633,35 @@ Documentación interactiva: `/docs` (Swagger UI)
 
 ### Auth
 
-| Método | Ruta | Auth | Descripción |
-|--------|------|------|-------------|
-| GET | `/auth/discord` | — | Iniciar login con Discord |
-| GET | `/auth/discord/callback` | — | Callback OAuth2 → genera JWT |
-| GET | `/auth/me` | JWT | Perfil del usuario actual |
+| Método | Ruta                       | Auth | Descripción                  |
+| ------- | -------------------------- | ---- | ----------------------------- |
+| GET     | `/auth/discord`          | —   | Iniciar login con Discord     |
+| GET     | `/auth/discord/callback` | —   | Callback OAuth2 → genera JWT |
+| GET     | `/auth/me`               | JWT  | Perfil del usuario actual     |
 
 ### Courses
 
-| Método | Ruta | Auth | Descripción |
-|--------|------|------|-------------|
-| GET | `/courses` | JWT | Listar cursos (`?category=backend&level=intermediate`) |
-| GET | `/courses/categories` | JWT | Categorías disponibles |
-| GET | `/courses/:id` | JWT | Detalle de un curso |
+| Método | Ruta                    | Auth | Descripción                                             |
+| ------- | ----------------------- | ---- | -------------------------------------------------------- |
+| GET     | `/courses`            | JWT  | Listar cursos (`?category=backend&level=intermediate`) |
+| GET     | `/courses/categories` | JWT  | Categorías disponibles                                  |
+| GET     | `/courses/:id`        | JWT  | Detalle de un curso                                      |
 
 ### Assessments
 
-| Método | Ruta | Auth | Descripción |
-|--------|------|------|-------------|
-| POST | `/assessments` | JWT | Enviar cuestionario → genera ruta con IA |
-| GET | `/assessments` | JWT | Historial de cuestionarios |
+| Método | Ruta             | Auth | Descripción                              |
+| ------- | ---------------- | ---- | ----------------------------------------- |
+| POST    | `/assessments` | JWT  | Enviar cuestionario → genera ruta con IA |
+| GET     | `/assessments` | JWT  | Historial de cuestionarios                |
 
 ### Learning Paths
 
-| Método | Ruta | Auth | Descripción |
-|--------|------|------|-------------|
-| GET | `/learning-paths` | JWT | Mis rutas con % de progreso |
-| GET | `/learning-paths/:id` | JWT | Detalle con cursos y progreso |
-| PATCH | `/learning-paths/:pathId/progress/:courseId` | JWT | Marcar/desmarcar curso completado |
-| DELETE | `/learning-paths/:id` | JWT | Eliminar una ruta |
+| Método | Ruta                                           | Auth | Descripción                      |
+| ------- | ---------------------------------------------- | ---- | --------------------------------- |
+| GET     | `/learning-paths`                            | JWT  | Mis rutas con % de progreso       |
+| GET     | `/learning-paths/:id`                        | JWT  | Detalle con cursos y progreso     |
+| PATCH   | `/learning-paths/:pathId/progress/:courseId` | JWT  | Marcar/desmarcar curso completado |
+| DELETE  | `/learning-paths/:id`                        | JWT  | Eliminar una ruta                 |
 
 ---
 
@@ -710,6 +714,7 @@ nest --version    # debe mostrar 10.x.x — si no: sudo npm i -g @nestjs/cli
 ```
 
 Si algo falta:
+
 - **Node.js 20:** https://nodejs.org → descargar versión LTS
 - **Docker:** https://docs.docker.com/get-docker
 - **NestJS CLI:** `sudo npm i -g @nestjs/cli`
@@ -754,16 +759,17 @@ nano .env
 
 **Variables que DEBES rellenar para desarrollo local:**
 
-| Variable | Dónde obtenerla |
-|----------|----------------|
-| `DATABASE_URL` | Se genera automáticamente con Docker (ver Paso 4) |
-| `JWT_SECRET` | Correr: `openssl rand -base64 64` |
-| `DISCORD_CLIENT_ID` | discord.com/developers/applications → tu app → OAuth2 |
-| `DISCORD_CLIENT_SECRET` | discord.com/developers/applications → tu app → OAuth2 |
-| `DISCORD_CALLBACK_URL` | Dejar como: `http://localhost:3000/api/v1/auth/discord/callback` |
-| `ANTHROPIC_API_KEY` | console.anthropic.com → API Keys |
+| Variable                  | Dónde obtenerla                                                  |
+| ------------------------- | ----------------------------------------------------------------- |
+| `DATABASE_URL`          | Se genera automáticamente con Docker (ver Paso 4)                |
+| `JWT_SECRET`            | Correr:`openssl rand -base64 64`                                |
+| `DISCORD_CLIENT_ID`     | discord.com/developers/applications → tu app → OAuth2           |
+| `DISCORD_CLIENT_SECRET` | discord.com/developers/applications → tu app → OAuth2           |
+| `DISCORD_CALLBACK_URL`  | Dejar como:`http://localhost:3000/api/v1/auth/discord/callback` |
+| `ANTHROPIC_API_KEY`     | console.anthropic.com → API Keys                                 |
 
 **Ejemplo de `.env` para desarrollo local:**
+
 ```bash
 PORT=3000
 NODE_ENV=development
@@ -792,6 +798,7 @@ docker compose up -d postgres
 ```
 
 Verificar que está corriendo:
+
 ```bash
 docker ps
 # Debe mostrar: codequest-db   Up X seconds
@@ -823,6 +830,7 @@ npm run migration:run
 ```
 
 Debes ver algo como:
+
 ```
 Running migrations...
 Migration CreateProfiles has been executed successfully.
@@ -844,6 +852,7 @@ npm run start:dev
 ```
 
 Debes ver:
+
 ```
 [Nest] LOG  Starting Nest application...
 [Nest] LOG  AppModule dependencies initialized
@@ -865,6 +874,7 @@ http://localhost:3000/api/v1/docs
 Debes ver la documentación **Swagger UI** con todos los endpoints del proyecto.
 
 Prueba el endpoint de salud:
+
 ```bash
 curl http://localhost:3000/api/v1/health
 # Respuesta: { "status": "ok" }
@@ -912,6 +922,7 @@ npx tsc --noEmit
 ### Solución de problemas comunes
 
 **❌ Error: `connect ECONNREFUSED 127.0.0.1:5432`**
+
 ```bash
 # PostgreSQL no está corriendo
 docker compose up -d postgres
@@ -919,12 +930,14 @@ docker ps  # verificar que aparece codequest-db
 ```
 
 **❌ Error: `Cannot find module '@nestjs/config'`**
+
 ```bash
 # Faltan dependencias
 npm install
 ```
 
 **❌ Error: `JWT_SECRET is not defined`**
+
 ```bash
 # Falta el archivo .env
 cp .env.example .env
@@ -932,6 +945,7 @@ cp .env.example .env
 ```
 
 **❌ Error en Discord callback: `redirect_uri_mismatch`**
+
 ```
 Verificar que en Discord Developer Portal el redirect URL sea exactamente:
 http://localhost:3000/api/v1/auth/discord/callback
@@ -939,6 +953,7 @@ http://localhost:3000/api/v1/auth/discord/callback
 ```
 
 **❌ Error: `Migration not found`**
+
 ```bash
 # Compilar primero y luego correr migrations
 npm run build
@@ -1056,11 +1071,13 @@ develop                 ← integración
 ```
 
 **Flujo:**
+
 ```
 feature/* → PR a develop → revisión → merge → PR a main → deploy automático
 ```
 
 Cada PR debe incluir:
+
 - Descripción clara del cambio
 - Migrations si hay cambios en el schema
 - Al menos 1 reviewer del equipo
@@ -1071,12 +1088,12 @@ Cada PR debe incluir:
 
 ### Stack completo en DigitalOcean
 
-| Servicio | Plan | Precio/mes |
-|---|---|---|
-| App Platform — Backend | Basic (512MB) | $5.00 |
-| App Platform — Frontend | Static Site | $0.00 |
-| Managed PostgreSQL | Basic 1GB | $15.00 |
-| **Total** | | **$20.00/mes** |
+| Servicio                 | Plan          | Precio/mes           |
+| ------------------------ | ------------- | -------------------- |
+| App Platform — Backend  | Basic (512MB) | $5.00                |
+| App Platform — Frontend | Static Site   | $0.00                |
+| Managed PostgreSQL       | Basic 1GB     | $15.00               |
+| **Total**          |               | **$20.00/mes** |
 
 ### Para el hackathon (14 días)
 
