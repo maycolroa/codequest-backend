@@ -69,6 +69,19 @@ nest new codequest-backend
 
 ---
 
+### 2026-09-16 — Setup inicial del proyecto
+
+**[CHORE]** Instalación del CLI de NestJS (`@nestjs/cli`)
+
+**[CHORE]** Inicialización del proyecto base con `nest new codequest-backend`
+
+**[DOCS]** Creación de los archivos de documentación del proyecto:
+- `CLAUDE.md`, `RULES.md`, `CONTEXT.md`, `CHANGELOG.md`, `TASKS.md`, `DECISIONS.md`
+
+**[CHORE]** Primer commit y push al repositorio
+
+---
+
 ### PRÓXIMAS ENTRADAS — Agregar aquí
 
 <!--

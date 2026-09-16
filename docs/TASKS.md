@@ -8,6 +8,72 @@
 
 ## 🔴 Por hacer
 
+### Configuración inicial del entorno (dependencias, env, Docker, main.ts)
+
+- [ ] **Instalar dependencias del proyecto**
+  - Dependencias principales:
+    ```bash
+    npm install @nestjs/typeorm typeorm pg @nestjs/config @nestjs/jwt @nestjs/passport passport-discord passport-jwt @anthropic-ai/sdk class-validator class-transformer @nestjs/swagger
+    ```
+  - DevDependencies:
+    ```bash
+    npm install -D @types/passport-discord @types/passport-jwt
+    ```
+  - Qué hace cada dependencia:
+    - `@nestjs/typeorm` + `typeorm` + `pg` — conectan NestJS con PostgreSQL vía TypeORM.
+    - `@nestjs/config` — carga y expone las variables de entorno (`.env`).
+    - `@nestjs/jwt` — genera y valida tokens JWT.
+    - `@nestjs/passport` — integra Passport.js con NestJS (guards/strategies).
+    - `passport-discord` — strategy de Passport para OAuth2 con Discord.
+    - `passport-jwt` — strategy de Passport para validar Bearer tokens JWT.
+    - `@anthropic-ai/sdk` — cliente oficial para llamar a la API de Claude.
+    - `class-validator` — decoradores de validación para los DTOs.
+    - `class-transformer` — transforma payloads planos a instancias de clase (DTOs).
+    - `@nestjs/swagger` — genera la documentación OpenAPI/Swagger.
+    - `@types/passport-discord` / `@types/passport-jwt` — tipos TypeScript para ambas strategies.
+
+- [ ] **Crear archivo `.env.example`**
+  - Variables requeridas (ver `docs/CONTEXT.md` → sección "Variables de entorno requeridas"), con valores de ejemplo (NO reales):
+    ```bash
+    PORT=3000
+    NODE_ENV=development
+
+    FRONTEND_URL=http://localhost:5173
+
+    DATABASE_URL=postgresql://postgres:postgres@localhost:5432/codequest?sslmode=disable
+
+    JWT_SECRET=reemplazar-con-un-string-aleatorio-largo
+    JWT_EXPIRES_IN=7d
+
+    DISCORD_CLIENT_ID=tu-discord-client-id
+    DISCORD_CLIENT_SECRET=tu-discord-client-secret
+    DISCORD_CALLBACK_URL=http://localhost:3000/api/v1/auth/discord/callback
+    DEVTALLES_GUILD_ID=1130900724499365958
+
+    ANTHROPIC_API_KEY=sk-ant-tu-api-key-aqui
+    ```
+  - ⚠️ **Advertencia:** el archivo `.env` real (con credenciales verdaderas) **nunca** debe subirse al repositorio — debe estar listado en `.gitignore`. Solo `.env.example` (con valores de ejemplo/placeholder) se versiona en git.
+
+- [ ] **Crear `Dockerfile` multi-stage**
+  - **Stage 1 (builder)**: parte de `node:20-alpine`, copia `package.json`/`package-lock.json`, corre `npm ci` (instala dependencias + devDependencies), copia el resto del código fuente y corre `npm run build` para generar la carpeta `dist/`.
+  - **Stage 2 (production)**: parte de `node:20-alpine` limpio, copia `package.json`/`package-lock.json`, corre `npm ci --omit=dev` (solo dependencias de producción), y copia `dist/` (y la carpeta de `migrations` si vive fuera de `dist/`) desde el Stage 1.
+  - **CMD**: debe correr las migrations antes de levantar el servidor, por ejemplo:
+    ```dockerfile
+    CMD ["sh", "-c", "npm run migration:run && node dist/main"]
+    ```
+
+- [ ] **Crear `docker-compose.yml`**
+  - Servicios necesarios: `postgres` (imagen `postgres:17-alpine`) para desarrollo local; opcionalmente un servicio `backend` que build-ee desde el `Dockerfile` para levantar todo junto.
+  - Variables de entorno del postgres local: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` (deben coincidir con lo que use `DATABASE_URL` en `.env`).
+  - Puerto: mapear `5432:5432`.
+  - Volumen: un volumen nombrado (ej. `postgres_data`) montado en `/var/lib/postgresql/data` para persistir los datos entre reinicios.
+
+- [ ] **Configurar `main.ts`**
+  - Agregar `ValidationPipe` global (con `whitelist: true` y `transform: true`) vía `app.useGlobalPipes(...)`.
+  - Agregar Swagger usando `DocumentBuilder` (título, descripción, versión) + `SwaggerModule.createDocument()` y `SwaggerModule.setup('docs', app, document)` para que quede disponible en `/docs` (ver `docs/CONTEXT.md`).
+  - Agregar el prefijo global de rutas con `app.setGlobalPrefix('api/v1')`.
+  - Habilitar CORS para el frontend con `app.enableCors({ origin: process.env.FRONTEND_URL, credentials: true })`.
+
 ### Setup y configuración
 - [ ] Crear repositorio en GitHub y configurar ramas (main, develop)
 - [ ] Configurar GitHub Actions para CI básico (lint + build)
@@ -105,6 +171,10 @@
 <!-- Ejemplo: -->
 <!-- - [x] Setup inicial del proyecto ✓ 2026-09-14 -->
 <!-- - [x] Crear archivos de proyecto (CLAUDE.md, RULES.md...) ✓ 2026-09-14 -->
+
+- [x] Inicializar proyecto NestJS ✓ 2026-09-14
+- [x] Crear archivos de documentación (CLAUDE.md, RULES.md, CONTEXT.md, CHANGELOG.md, TASKS.md, DECISIONS.md) ✓ 2026-09-14
+- [x] Primer commit al repositorio ✓ 2026-09-14
 
 ---
 
