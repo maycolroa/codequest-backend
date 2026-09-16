@@ -1,6 +1,6 @@
 # 🚀 Code Quest 2026 — Backend
 
-> API REST modular construida con **NestJS + TypeScript + Supabase + Docker**  
+> API REST modular construida con **NestJS + TypeScript + TypeORM + PostgreSQL + Docker**
 > Generador de Rutas de Aprendizaje con IA · DevTalles · CQ03-2026
 
 ---
@@ -11,13 +11,16 @@
 2. [Stack tecnológico](#stack-tecnológico)
 3. [Estructura del proyecto](#estructura-del-proyecto)
 4. [Módulos](#módulos)
-5. [Base de datos](#base-de-datos)
-6. [API Reference](#api-reference)
-7. [Variables de entorno](#variables-de-entorno)
-8. [Correr en local](#correr-en-local)
-9. [Docker](#docker)
-10. [Deploy en DigitalOcean](#deploy-en-digitalocean)
-11. [Ramas de Git](#ramas-de-git)
+5. [Base de datos con TypeORM](#base-de-datos-con-typeorm)
+6. [Entidades](#entidades)
+7. [Migrations](#migrations)
+8. [API Reference](#api-reference)
+9. [Variables de entorno](#variables-de-entorno)
+10. [Correr en local](#correr-en-local)
+11. [Docker](#docker)
+12. [Deploy en DigitalOcean](#deploy-en-digitalocean)
+13. [Ramas de Git](#ramas-de-git)
+14. [Costos](#costos)
 
 ---
 
@@ -25,10 +28,10 @@
 
 El backend expone una API REST que permite:
 
-- Autenticar usuarios con **Discord OAuth2**
-- Guardar y consultar el catálogo de **cursos de DevTalles**
+- Autenticar usuarios con **Discord OAuth2** y tokens **JWT**
+- Consultar el catálogo de **cursos de DevTalles**
 - Recibir el **cuestionario** del usuario y enviarlo a **Claude AI** para generar una ruta personalizada
-- Persistir las **rutas de aprendizaje** generadas y el **progreso** por curso
+- Persistir las **rutas de aprendizaje** y el **progreso** por curso en **PostgreSQL**
 - Servir todo desde contenedores **Docker** desplegados en **DigitalOcean**
 
 ---
@@ -40,11 +43,12 @@ El backend expone una API REST que permite:
 | Runtime | Node.js | 20 LTS |
 | Framework | NestJS | 10 |
 | Lenguaje | TypeScript | 5.1 |
-| Base de datos | Supabase (PostgreSQL) | 2.x |
+| ORM | TypeORM | 0.3.x |
+| Base de datos | PostgreSQL (DigitalOcean Managed) | 17 |
 | Autenticación | Discord OAuth2 + JWT | — |
 | IA | Anthropic Claude API | claude-sonnet-4-6 |
 | Contenedores | Docker + Docker Compose | 24+ |
-| Deploy | DigitalOcean App Platform / Droplet | — |
+| Deploy | DigitalOcean App Platform | — |
 | Documentación | Swagger (OpenAPI 3.0) | — |
 
 ---
@@ -55,57 +59,66 @@ El backend expone una API REST que permite:
 codequest-backend/
 │
 ├── src/
-│   ├── main.ts                     # Entrada: Swagger, CORS, ValidationPipe, prefijo /api/v1
-│   ├── app.module.ts               # Módulo raíz — importa todos los módulos
+│   ├── main.ts                        # Entrada: Swagger, CORS, ValidationPipe, prefijo /api/v1
+│   ├── app.module.ts                  # Módulo raíz — TypeOrmModule + todos los módulos
 │   │
-│   ├── supabase/                   # Módulo global de base de datos
-│   │   ├── supabase.module.ts      # @Global() — disponible en toda la app
-│   │   └── supabase.service.ts     # Cliente Supabase con service_role key
+│   ├── config/
+│   │   └── database.config.ts         # Configuración TypeORM desde variables de entorno
 │   │
-│   ├── auth/                       # Autenticación Discord + JWT
+│   ├── entities/                      # Entidades TypeORM (mapean las tablas de PostgreSQL)
+│   │   ├── profile.entity.ts          # Tabla: profiles
+│   │   ├── course.entity.ts           # Tabla: courses
+│   │   ├── user-assessment.entity.ts  # Tabla: user_assessments
+│   │   ├── learning-path.entity.ts    # Tabla: learning_paths
+│   │   └── user-progress.entity.ts    # Tabla: user_progress
+│   │
+│   ├── migrations/                    # Migrations de TypeORM (control de versiones del schema)
+│   │   ├── 1726000000000-CreateProfiles.ts
+│   │   ├── 1726000000001-CreateCourses.ts
+│   │   ├── 1726000000002-CreateAssessments.ts
+│   │   ├── 1726000000003-CreateLearningPaths.ts
+│   │   ├── 1726000000004-CreateUserProgress.ts
+│   │   └── 1726000000005-SeedCourses.ts
+│   │
+│   ├── auth/                          # Autenticación Discord + JWT
 │   │   ├── auth.module.ts
-│   │   ├── auth.controller.ts      # GET /auth/discord, /auth/discord/callback, /auth/me
-│   │   ├── auth.service.ts         # findOrCreateUser, generateToken, getProfile
+│   │   ├── auth.controller.ts
+│   │   ├── auth.service.ts
 │   │   └── strategies/
-│   │       ├── discord.strategy.ts # Passport strategy OAuth2
-│   │       └── jwt.strategy.ts     # Passport strategy JWT Bearer
+│   │       ├── discord.strategy.ts
+│   │       └── jwt.strategy.ts
 │   │
-│   ├── courses/                    # Catálogo de cursos DevTalles
+│   ├── courses/                       # Catálogo de cursos DevTalles
 │   │   ├── courses.module.ts
-│   │   ├── courses.controller.ts   # GET /courses, /courses/:id, /courses/categories
-│   │   └── courses.service.ts      # findAll (con filtros), findById, getCatalogSummary
+│   │   ├── courses.controller.ts
+│   │   └── courses.service.ts
 │   │
-│   ├── assessments/                # Cuestionario de habilidades
+│   ├── assessments/                   # Cuestionario de habilidades
 │   │   ├── assessments.module.ts
-│   │   ├── assessments.controller.ts  # POST /assessments, GET /assessments
-│   │   ├── assessments.service.ts     # createAndGeneratePath (orquesta IA + DB)
+│   │   ├── assessments.controller.ts
+│   │   ├── assessments.service.ts
 │   │   └── dto/
 │   │       └── create-assessment.dto.ts
 │   │
-│   ├── learning-paths/             # Rutas de aprendizaje generadas
+│   ├── learning-paths/                # Rutas de aprendizaje generadas
 │   │   ├── learning-paths.module.ts
-│   │   ├── learning-paths.controller.ts  # GET /learning-paths, /:id, PATCH /:id/progress/:courseId, DELETE /:id
-│   │   └── learning-paths.service.ts     # findAllByUser, findOne, toggleCourseProgress, remove
+│   │   ├── learning-paths.controller.ts
+│   │   └── learning-paths.service.ts
 │   │
-│   ├── ai/                         # Integración Claude API
+│   ├── ai/                            # Integración Claude API
 │   │   ├── ai.module.ts
-│   │   └── ai.service.ts           # generateLearningPath — prompt engineering + parse JSON
+│   │   └── ai.service.ts
 │   │
-│   └── common/                     # Utilidades compartidas
+│   └── common/                        # Utilidades compartidas
 │       ├── guards/
-│       │   └── jwt-auth.guard.ts   # Guard reutilizable para rutas protegidas
+│       │   └── jwt-auth.guard.ts
 │       └── decorators/
-│           └── get-user.decorator.ts  # @GetUser() — extrae el usuario del request
+│           └── get-user.decorator.ts
 │
-├── supabase/
-│   └── schema.sql                  # DDL completo: tablas, índices, RLS, datos semilla
-│
-├── docs/
-│   └── deploy-digitalocean.md      # Guía paso a paso de deploy
-│
-├── Dockerfile                      # Multi-stage: builder + production (Node Alpine)
-├── docker-compose.yml              # Servicio backend con variables de entorno
-├── .env.example                    # Plantilla de variables (sin secretos)
+├── Dockerfile                         # Multi-stage: builder + production
+├── docker-compose.yml                 # Backend + PostgreSQL local
+├── docker-compose.prod.yml            # Solo backend (BD en DigitalOcean)
+├── .env.example                       # Plantilla de variables
 ├── nest-cli.json
 ├── tsconfig.json
 ├── package.json
@@ -116,102 +129,137 @@ codequest-backend/
 
 ## Módulos
 
-### `SupabaseModule` — Global
+### `AppModule` — Raíz
 
-Módulo marcado con `@Global()`. Provee el cliente de Supabase con `service_role` key para todas las operaciones server-side. No requiere importarse en cada módulo.
+Configura TypeORM de forma global con la conexión a PostgreSQL.
 
-```
-SupabaseModule
-  └── SupabaseService
-        └── createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+```typescript
+@Module({
+  imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'postgres',
+        url: config.get('DATABASE_URL'),
+        entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        migrations: [__dirname + '/migrations/*{.ts,.js}'],
+        synchronize: false,   // NUNCA true en producción
+        ssl: { rejectUnauthorized: false }, // requerido en DigitalOcean
+      }),
+    }),
+    AuthModule,
+    CoursesModule,
+    AssessmentsModule,
+    LearningPathsModule,
+    AiModule,
+  ],
+})
+export class AppModule {}
 ```
 
 ---
 
 ### `AuthModule`
 
-Maneja todo el flujo de autenticación.
+Maneja Discord OAuth2 y JWT. Usa el repositorio de `Profile` para upsert de usuarios.
 
 ```
 AuthModule
   ├── AuthController
   │     ├── GET  /api/v1/auth/discord            → redirige a Discord
-  │     ├── GET  /api/v1/auth/discord/callback   → captura código, crea JWT, redirige al frontend
+  │     ├── GET  /api/v1/auth/discord/callback   → crea/actualiza perfil, genera JWT
   │     └── GET  /api/v1/auth/me                 → perfil del usuario autenticado
   │
   ├── AuthService
-  │     ├── findOrCreateUser(profile)   → upsert en tabla profiles
-  │     ├── generateToken(user)         → firma JWT con payload {sub, discord_id, username}
-  │     └── getProfile(userId)          → consulta profiles por id
+  │     ├── findOrCreateUser(profile)   → upsert con TypeORM Repository<Profile>
+  │     ├── generateToken(user)         → firma JWT {sub, discordId, username}
+  │     └── getProfile(userId)          → findOne por id
   │
   └── Strategies
         ├── DiscordStrategy  → scope: identify, email, guilds
-        └── JwtStrategy      → extrae token del header Authorization: Bearer
+        └── JwtStrategy      → extrae Bearer token del header
 ```
 
-**Flujo completo:**
+**Flujo de autenticación:**
 ```
-Usuario → GET /auth/discord
-  → Passport redirige a discord.com/oauth2
-  → Discord redirige a /auth/discord/callback con code
-  → DiscordStrategy valida y llama a findOrCreateUser
-  → Se genera JWT
-  → Redirect a frontend/?token=<jwt>
-  → Frontend guarda token en localStorage
-  → Todas las peticiones llevan Authorization: Bearer <token>
+1. GET /auth/discord         → Passport redirige a discord.com/oauth2
+2. Discord devuelve code     → Callback en /auth/discord/callback
+3. DiscordStrategy valida    → llama AuthService.findOrCreateUser()
+4. TypeORM hace upsert       → en tabla profiles
+5. JWT firmado               → redirect frontend?token=<jwt>
+6. Frontend guarda token     → localStorage
+7. Requests siguientes       → Authorization: Bearer <token>
 ```
 
 ---
 
 ### `CoursesModule`
 
-Catálogo de cursos de DevTalles. Solo lectura para usuarios finales.
+Catálogo de cursos DevTalles. Usa `Repository<Course>` con TypeORM.
 
 ```
 CoursesModule
   ├── CoursesController (requiere JWT)
   │     ├── GET /api/v1/courses                  → lista con filtros ?category= &level=
-  │     ├── GET /api/v1/courses/categories       → categorías únicas disponibles
+  │     ├── GET /api/v1/courses/categories       → categorías únicas
   │     └── GET /api/v1/courses/:id              → detalle de un curso
   │
   └── CoursesService
-        ├── findAll(filters?)       → query con filtros dinámicos
-        ├── findById(id)            → single course
-        ├── getCategories()         → distinct categories
-        └── getCatalogSummary()     → campos mínimos para el prompt de IA
+        ├── findAll(filters?)      → QueryBuilder con WHERE dinámico
+        ├── findById(id)           → findOneOrFail
+        ├── getCategories()        → SELECT DISTINCT category
+        └── getCatalogSummary()    → select mínimo para el prompt de IA
+```
+
+**Ejemplo con TypeORM QueryBuilder:**
+```typescript
+findAll(filters?: { category?: string; level?: string }) {
+  const qb = this.coursesRepo.createQueryBuilder('course')
+  if (filters?.category) qb.andWhere('course.category = :cat', { cat: filters.category })
+  if (filters?.level)    qb.andWhere('course.level = :lvl',    { lvl: filters.level })
+  return qb.orderBy('course.title').getMany()
+}
 ```
 
 ---
 
 ### `AssessmentsModule`
 
-Recibe el cuestionario del usuario, lo pasa a la IA y guarda la ruta generada.
+Orquesta el cuestionario → IA → guardado de ruta.
 
 ```
 AssessmentsModule
   ├── AssessmentsController (requiere JWT)
-  │     ├── POST /api/v1/assessments   → enviar cuestionario → genera ruta con IA
-  │     └── GET  /api/v1/assessments   → historial de cuestionarios del usuario
+  │     ├── POST /api/v1/assessments   → cuestionario → genera ruta con IA
+  │     └── GET  /api/v1/assessments   → historial del usuario
   │
   └── AssessmentsService
         └── createAndGeneratePath(userId, dto)
-              1. Guarda assessment en user_assessments
-              2. Llama a AiService.generateLearningPath()
-              3. Guarda LearningPath en learning_paths
-              4. Crea registros de progreso en user_progress
+              1. Crea UserAssessment (TypeORM save)
+              2. Llama AiService.generateLearningPath()
+              3. Crea LearningPath con courses_order JSON
+              4. Crea registros UserProgress (insert bulk)
               5. Retorna { assessment, learningPath }
 ```
 
-**DTO del cuestionario:**
+**DTO:**
 ```typescript
-{
-  interests: string[]              // ['frontend', 'backend', 'devops']
-  goals: string                    // meta profesional en texto libre
-  currentLevel: 'beginner'         // | 'intermediate' | 'advanced'
-       | 'intermediate'
-       | 'advanced'
-  availableHoursPerWeek: number    // 1-40
-  preferredTechnologies?: string[] // ['Vue', 'NestJS', 'Docker']
+class CreateAssessmentDto {
+  @IsArray()
+  interests: string[]           // ['frontend', 'backend', 'devops']
+
+  @IsString()
+  goals: string                 // meta profesional en texto libre
+
+  @IsEnum(['beginner','intermediate','advanced'])
+  currentLevel: string
+
+  @IsNumber() @Min(1) @Max(40)
+  availableHoursPerWeek: number
+
+  @IsOptional() @IsArray()
+  preferredTechnologies?: string[]
 }
 ```
 
@@ -219,52 +267,54 @@ AssessmentsModule
 
 ### `LearningPathsModule`
 
-CRUD de rutas de aprendizaje y sistema de progreso.
+CRUD de rutas + sistema de progreso por curso.
 
 ```
 LearningPathsModule
   ├── LearningPathsController (requiere JWT)
-  │     ├── GET    /api/v1/learning-paths                          → mis rutas con % progreso
-  │     ├── GET    /api/v1/learning-paths/:id                      → detalle con cursos y progreso
-  │     ├── PATCH  /api/v1/learning-paths/:pathId/progress/:courseId → marcar/desmarcar completado
-  │     └── DELETE /api/v1/learning-paths/:id                      → eliminar ruta
+  │     ├── GET    /api/v1/learning-paths                           → mis rutas + % progreso
+  │     ├── GET    /api/v1/learning-paths/:id                       → detalle con cursos
+  │     ├── PATCH  /api/v1/learning-paths/:pathId/progress/:courseId → toggle completado
+  │     └── DELETE /api/v1/learning-paths/:id                       → eliminar ruta
   │
   └── LearningPathsService
-        ├── findAllByUser(userId)                    → rutas + progressPercentage calculado
-        ├── findOne(id, userId)                      → ruta con JOIN a cursos y progreso
-        ├── toggleCourseProgress(pathId, courseId,   → update completed + completed_at
-        │     userId, completed)
-        └── remove(id, userId)                       → elimina ruta y su progreso
+        ├── findAllByUser(userId)    → find con relaciones + calcular % progreso
+        ├── findOne(id, userId)      → find con JOIN a courses y progress
+        ├── toggleCourseProgress()   → update completed + completedAt
+        └── remove(id, userId)       → delete en cascada
 ```
 
 ---
 
 ### `AiModule`
 
-Integración con la API de Anthropic (Claude).
+Integración con Anthropic Claude API.
 
 ```
 AiModule
   └── AiService
         └── generateLearningPath(assessment)
-              1. Obtiene catálogo completo de cursos (getCatalogSummary)
-              2. Construye system prompt con reglas estrictas
-              3. Construye user message con perfil + catálogo
-              4. Llama a claude-sonnet-4-6 con max_tokens: 2000
+              1. Obtiene catálogo: CoursesService.getCatalogSummary()
+              2. Construye system prompt (reglas + formato JSON estricto)
+              3. Construye user message (perfil + catálogo completo)
+              4. POST a claude-sonnet-4-6 (max_tokens: 2000)
               5. Parsea respuesta JSON
-              6. Retorna GeneratedPath { title, description,
-                 estimatedWeeks, totalHours, courses[], tips[] }
+              6. Retorna GeneratedPath tipado
 ```
 
-**Formato de respuesta de la IA:**
+**Respuesta esperada de Claude:**
 ```json
 {
   "title": "Tu ruta hacia Fullstack JavaScript",
-  "description": "Ruta de 3 frases explicando el recorrido",
+  "description": "Descripción de 2-3 oraciones del recorrido",
   "estimatedWeeks": 24,
   "totalHours": 148,
   "courses": [
-    { "courseId": "uuid-del-curso", "order": 1, "reason": "Por qué este curso primero" }
+    {
+      "courseId": "uuid-exacto-del-catalogo",
+      "order": 1,
+      "reason": "Por qué este curso en este momento"
+    }
   ],
   "tips": ["Consejo 1", "Consejo 2", "Consejo 3"]
 }
@@ -272,82 +322,298 @@ AiModule
 
 ---
 
-## Base de datos
+## Base de datos con TypeORM
 
-Supabase (PostgreSQL hosted). Schema completo en `supabase/schema.sql`.
+### Conexión a DigitalOcean PostgreSQL
 
-### Tablas
-
-```
-profiles
-  id              uuid PK
-  discord_id      text UNIQUE
-  username        text
-  email           text
-  avatar_url      text
-  created_at      timestamptz
-  updated_at      timestamptz
-
-courses
-  id              uuid PK
-  title           text
-  description     text
-  category        text        -- 'frontend' | 'backend' | 'fullstack' | 'devops' | 'mobile' | 'databases'
-  level           text        -- 'beginner' | 'intermediate' | 'advanced'
-  url             text
-  duration_hours  int
-  tags            text[]
-  is_active       boolean
-  created_at      timestamptz
-
-user_assessments
-  id                        uuid PK
-  user_id                   uuid FK → profiles
-  interests                 text[]
-  goals                     text
-  current_level             text
-  available_hours_per_week  int
-  preferred_technologies    text[]
-  created_at                timestamptz
-
-learning_paths
-  id              uuid PK
-  user_id         uuid FK → profiles
-  assessment_id   uuid FK → user_assessments
-  title           text
-  description     text
-  estimated_weeks int
-  total_hours     int
-  courses_order   jsonb       -- [{courseId, order, reason}]
-  tips            text[]
-  created_at      timestamptz
-
-user_progress
-  id               uuid PK
-  user_id          uuid FK → profiles
-  learning_path_id uuid FK → learning_paths
-  course_id        uuid FK → courses
-  order            int
-  completed        boolean
-  completed_at     timestamptz
-  created_at       timestamptz
-  UNIQUE(learning_path_id, course_id)
-```
-
-### Relaciones
+DigitalOcean provee una **Connection String** en formato:
 
 ```
-profiles ──< user_assessments ──< learning_paths ──< user_progress >── courses
+postgresql://usuario:password@host:puerto/nombre_db?sslmode=require
 ```
 
-### Índices
+Se pone en `DATABASE_URL` y TypeORM la usa directamente. El SSL es **obligatorio** en DigitalOcean.
 
-```sql
-idx_learning_paths_user_id   ON learning_paths(user_id)
-idx_user_progress_path_id    ON user_progress(learning_path_id)
-idx_user_progress_user_id    ON user_progress(user_id)
-idx_courses_category         ON courses(category)
-idx_courses_level            ON courses(level)
+```typescript
+// config/database.config.ts
+export const databaseConfig = (config: ConfigService): TypeOrmModuleOptions => ({
+  type: 'postgres',
+  url: config.get<string>('DATABASE_URL'),
+  entities: [Profile, Course, UserAssessment, LearningPath, UserProgress],
+  migrations: ['dist/migrations/*{.ts,.js}'],
+  synchronize: false,      // usar migrations en producción
+  logging: config.get('NODE_ENV') === 'development',
+  ssl: {
+    rejectUnauthorized: false,  // requerido para DigitalOcean managed DB
+  },
+})
+```
+
+---
+
+## Entidades
+
+### `Profile` — tabla `profiles`
+
+```typescript
+@Entity('profiles')
+export class Profile {
+  @PrimaryGeneratedColumn('uuid')
+  id: string
+
+  @Column({ unique: true })
+  discordId: string
+
+  @Column()
+  username: string
+
+  @Column({ nullable: true })
+  email: string
+
+  @Column({ nullable: true })
+  avatarUrl: string
+
+  @OneToMany(() => LearningPath, path => path.user)
+  learningPaths: LearningPath[]
+
+  @CreateDateColumn()
+  createdAt: Date
+
+  @UpdateDateColumn()
+  updatedAt: Date
+}
+```
+
+---
+
+### `Course` — tabla `courses`
+
+```typescript
+@Entity('courses')
+export class Course {
+  @PrimaryGeneratedColumn('uuid')
+  id: string
+
+  @Column()
+  title: string
+
+  @Column({ type: 'text', nullable: true })
+  description: string
+
+  @Column()
+  category: string    // 'frontend' | 'backend' | 'fullstack' | 'devops' | 'mobile' | 'databases'
+
+  @Column()
+  level: string       // 'beginner' | 'intermediate' | 'advanced'
+
+  @Column({ nullable: true })
+  url: string
+
+  @Column({ nullable: true })
+  durationHours: number
+
+  @Column('text', { array: true, default: [] })
+  tags: string[]
+
+  @Column({ default: true })
+  isActive: boolean
+
+  @CreateDateColumn()
+  createdAt: Date
+}
+```
+
+---
+
+### `UserAssessment` — tabla `user_assessments`
+
+```typescript
+@Entity('user_assessments')
+export class UserAssessment {
+  @PrimaryGeneratedColumn('uuid')
+  id: string
+
+  @ManyToOne(() => Profile, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user: Profile
+
+  @Column('text', { array: true })
+  interests: string[]
+
+  @Column('text')
+  goals: string
+
+  @Column()
+  currentLevel: string
+
+  @Column()
+  availableHoursPerWeek: number
+
+  @Column('text', { array: true, default: [] })
+  preferredTechnologies: string[]
+
+  @CreateDateColumn()
+  createdAt: Date
+}
+```
+
+---
+
+### `LearningPath` — tabla `learning_paths`
+
+```typescript
+@Entity('learning_paths')
+export class LearningPath {
+  @PrimaryGeneratedColumn('uuid')
+  id: string
+
+  @ManyToOne(() => Profile, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user: Profile
+
+  @ManyToOne(() => UserAssessment)
+  @JoinColumn({ name: 'assessment_id' })
+  assessment: UserAssessment
+
+  @Column()
+  title: string
+
+  @Column({ type: 'text', nullable: true })
+  description: string
+
+  @Column({ nullable: true })
+  estimatedWeeks: number
+
+  @Column({ nullable: true })
+  totalHours: number
+
+  @Column({ type: 'jsonb', default: [] })
+  coursesOrder: { courseId: string; order: number; reason: string }[]
+
+  @Column('text', { array: true, default: [] })
+  tips: string[]
+
+  @OneToMany(() => UserProgress, progress => progress.learningPath, { cascade: true })
+  userProgress: UserProgress[]
+
+  @CreateDateColumn()
+  createdAt: Date
+}
+```
+
+---
+
+### `UserProgress` — tabla `user_progress`
+
+```typescript
+@Entity('user_progress')
+@Unique(['learningPath', 'course'])
+export class UserProgress {
+  @PrimaryGeneratedColumn('uuid')
+  id: string
+
+  @ManyToOne(() => Profile, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user: Profile
+
+  @ManyToOne(() => LearningPath, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'learning_path_id' })
+  learningPath: LearningPath
+
+  @ManyToOne(() => Course)
+  @JoinColumn({ name: 'course_id' })
+  course: Course
+
+  @Column({ default: 1 })
+  order: number
+
+  @Column({ default: false })
+  completed: boolean
+
+  @Column({ type: 'timestamptz', nullable: true })
+  completedAt: Date
+
+  @CreateDateColumn()
+  createdAt: Date
+}
+```
+
+---
+
+### Diagrama de relaciones
+
+```
+Profile ──< UserAssessment
+Profile ──< LearningPath ──< UserProgress >── Course
+LearningPath ──< UserProgress
+```
+
+---
+
+## Migrations
+
+Las migrations controlan los cambios al schema sin perder datos.
+
+### Comandos
+
+```bash
+# Generar migration automática desde cambios en entidades
+npm run migration:generate -- src/migrations/NombreCambio
+
+# Crear migration vacía (para datos/seeds)
+npm run migration:create -- src/migrations/SeedCourses
+
+# Ejecutar todas las migrations pendientes
+npm run migration:run
+
+# Revertir la última migration
+npm run migration:revert
+
+# Ver estado de migrations
+npm run migration:show
+```
+
+### Scripts en package.json
+
+```json
+{
+  "scripts": {
+    "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/data-source.ts",
+    "migration:create":   "typeorm-ts-node-commonjs migration:create",
+    "migration:run":      "typeorm-ts-node-commonjs migration:run -d src/config/data-source.ts",
+    "migration:revert":   "typeorm-ts-node-commonjs migration:revert -d src/config/data-source.ts",
+    "migration:show":     "typeorm-ts-node-commonjs migration:show -d src/config/data-source.ts"
+  }
+}
+```
+
+### DataSource para CLI
+
+```typescript
+// src/config/data-source.ts
+import { DataSource } from 'typeorm'
+import * as dotenv from 'dotenv'
+dotenv.config()
+
+export default new DataSource({
+  type: 'postgres',
+  url: process.env.DATABASE_URL,
+  entities: ['src/**/*.entity.ts'],
+  migrations: ['src/migrations/*.ts'],
+  ssl: { rejectUnauthorized: false },
+})
+```
+
+### Flujo de trabajo con migrations
+
+```
+Cambiar entidad → npm run migration:generate → revisar migration → npm run migration:run
+```
+
+En **producción** (DigitalOcean), las migrations corren automáticamente al iniciar el contenedor:
+
+```dockerfile
+CMD ["sh", "-c", "node dist/node_modules/typeorm/cli.js migration:run -d dist/config/data-source.js && node dist/main"]
 ```
 
 ---
@@ -362,7 +628,7 @@ Documentación interactiva: `/docs` (Swagger UI)
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
 | GET | `/auth/discord` | — | Iniciar login con Discord |
-| GET | `/auth/discord/callback` | — | Callback OAuth2 |
+| GET | `/auth/discord/callback` | — | Callback OAuth2 → genera JWT |
 | GET | `/auth/me` | JWT | Perfil del usuario actual |
 
 ### Courses
@@ -384,8 +650,8 @@ Documentación interactiva: `/docs` (Swagger UI)
 
 | Método | Ruta | Auth | Descripción |
 |--------|------|------|-------------|
-| GET | `/learning-paths` | JWT | Mis rutas con porcentaje de progreso |
-| GET | `/learning-paths/:id` | JWT | Detalle de ruta con cursos y progreso |
+| GET | `/learning-paths` | JWT | Mis rutas con % de progreso |
+| GET | `/learning-paths/:id` | JWT | Detalle con cursos y progreso |
 | PATCH | `/learning-paths/:pathId/progress/:courseId` | JWT | Marcar/desmarcar curso completado |
 | DELETE | `/learning-paths/:id` | JWT | Eliminar una ruta |
 
@@ -394,28 +660,30 @@ Documentación interactiva: `/docs` (Swagger UI)
 ## Variables de entorno
 
 ```bash
-# App
+# ── App ──────────────────────────────────────────────
 PORT=3000
 NODE_ENV=production
-FRONTEND_URL=https://tu-frontend.com
+FRONTEND_URL=https://tu-frontend.ondigitalocean.app
 
-# Supabase
-SUPABASE_URL=https://xxxx.supabase.co
-SUPABASE_SERVICE_KEY=eyJ...          # service_role key (nunca la anon key aquí)
-SUPABASE_ANON_KEY=eyJ...
+# ── Base de datos (DigitalOcean PostgreSQL) ──────────
+# Obtener en: DigitalOcean → Databases → tu cluster → Connection String
+DATABASE_URL=postgresql://usuario:password@host:25060/defaultdb?sslmode=require
 
-# JWT
-JWT_SECRET=cadena-aleatoria-larga    # openssl rand -base64 64
+# ── JWT ──────────────────────────────────────────────
+JWT_SECRET=cadena-super-secreta-minimo-64-caracteres
+# Generar con: openssl rand -base64 64
 JWT_EXPIRES_IN=7d
 
-# Discord OAuth2
-DISCORD_CLIENT_ID=1234567890
-DISCORD_CLIENT_SECRET=abc123...
-DISCORD_CALLBACK_URL=https://tu-backend.com/api/v1/auth/discord/callback
+# ── Discord OAuth2 ───────────────────────────────────
+# Crear en: https://discord.com/developers/applications
+DISCORD_CLIENT_ID=1234567890123456789
+DISCORD_CLIENT_SECRET=AbCdEfGhIjKlMnOpQrSt
+DISCORD_CALLBACK_URL=https://tu-backend.ondigitalocean.app/api/v1/auth/discord/callback
 DEVTALLES_GUILD_ID=1130900724499365958
 
-# Anthropic
-ANTHROPIC_API_KEY=sk-ant-...
+# ── Anthropic Claude API ─────────────────────────────
+# Obtener en: https://console.anthropic.com
+ANTHROPIC_API_KEY=sk-ant-api03-...
 ```
 
 ---
@@ -425,8 +693,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 ### Requisitos
 
 - Node.js 20+
-- npm
-- Cuenta en Supabase (gratuita)
+- Docker y Docker Compose (para PostgreSQL local)
 - App en Discord Developer Portal
 - API Key de Anthropic
 
@@ -444,103 +711,148 @@ npm install
 cp .env.example .env
 # Editar .env con tus credenciales
 
-# 4. Correr el schema en Supabase
-# Ir a Supabase → SQL Editor → pegar supabase/schema.sql → Run
+# 4. Levantar PostgreSQL local con Docker
+docker compose up -d postgres
 
-# 5. Correr en modo desarrollo
+# 5. Ejecutar migrations (crea las tablas)
+npm run migration:run
+
+# 6. Correr en modo desarrollo
 npm run start:dev
+```
 
-# API disponible en:  http://localhost:3000/api/v1
-# Swagger docs en:    http://localhost:3000/docs
+```
+API disponible en:  http://localhost:3000/api/v1
+Swagger docs en:    http://localhost:3000/docs
+```
+
+### docker-compose.yml (desarrollo local)
+
+```yaml
+version: '3.8'
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: codequest-db
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_DB: codequest
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: .
+    container_name: codequest-backend
+    ports:
+      - '3000:3000'
+    env_file: .env
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
+```
+
+Con esto, la `DATABASE_URL` local sería:
+```
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/codequest
 ```
 
 ---
 
 ## Docker
 
-### Desarrollo local con Docker
-
-```bash
-# Construir imagen
-docker build -t codequest-backend .
-
-# Correr con variables de entorno
-docker run -p 3000:3000 --env-file .env codequest-backend
-```
-
-### Docker Compose
-
-```bash
-# Levantar
-docker compose up -d
-
-# Ver logs
-docker compose logs -f backend
-
-# Detener
-docker compose down
-```
-
-### Estructura del Dockerfile (multi-stage)
+### Dockerfile (multi-stage)
 
 ```dockerfile
-# Stage 1: Build — instala devDependencies y compila TypeScript
+# ── Stage 1: Build ───────────────────────────────────
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
-RUN npm run build          # genera /app/dist/
+RUN npm run build
 
-# Stage 2: Production — solo runtime, imagen mínima (~150MB)
+# ── Stage 2: Production ──────────────────────────────
 FROM node:20-alpine AS production
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 EXPOSE 3000
-CMD ["node", "dist/main"]
+# Corre migrations y luego levanta el servidor
+CMD ["sh", "-c", "node dist/node_modules/.bin/typeorm migration:run -d dist/config/data-source.js && node dist/main"]
 ```
+
+**Por qué multi-stage:** la imagen final solo tiene el código compilado y dependencias de producción. Resultado: imagen ~150MB en vez de ~600MB.
 
 ---
 
 ## Deploy en DigitalOcean
 
-### Opción A — App Platform (recomendada para el hackathon)
+### Paso 1 — Crear la base de datos PostgreSQL
 
 ```
-1. cloud.digitalocean.com/apps → Create App
-2. Conectar GitHub → seleccionar codequest-backend
-3. Configurar:
-   - Build Command: npm run build
-   - Run Command:   node dist/main
-   - Port:          3000
-4. Agregar todas las variables de entorno del .env
-5. Deploy → obtener URL pública
-6. Actualizar DISCORD_CALLBACK_URL con la URL real
-7. Actualizar FRONTEND_URL con la URL del frontend
+DigitalOcean → Databases → Create Database
+  Engine:   PostgreSQL 17
+  Plan:     Basic · 1GB RAM · $15/mes
+  Region:   New York (o el más cercano)
+  Nombre:   codequest-db
 ```
 
-### Opción B — Droplet con Docker
+Una vez creada, copiar la **Connection String** que aparece en el panel.
 
-```bash
-# En el servidor (Ubuntu 24.04)
-curl -fsSL https://get.docker.com | sh
-git clone https://github.com/tu-equipo/codequest-backend.git
-cd codequest-backend
-cp .env.example .env && nano .env    # rellenar credenciales
-docker compose up -d --build
-```
-
-### Checklist de deploy
+### Paso 2 — Deploy del backend en App Platform
 
 ```
-[ ] Backend responde en /api/v1/docs (Swagger)
+DigitalOcean → App Platform → Create App
+  Fuente:         GitHub → codequest-backend
+  Branch:         main
+  Build Command:  npm run build
+  Run Command:    node dist/main
+  Port:           3000
+  Plan:           Basic · $5/mes
+```
+
+Agregar variables de entorno en App Platform:
+
+```
+DATABASE_URL          → connection string de tu PostgreSQL DO
+PORT                  → 3000
+NODE_ENV              → production
+FRONTEND_URL          → URL del frontend desplegado
+JWT_SECRET            → cadena aleatoria segura
+JWT_EXPIRES_IN        → 7d
+DISCORD_CLIENT_ID     → de Discord Developer Portal
+DISCORD_CLIENT_SECRET → de Discord Developer Portal
+DISCORD_CALLBACK_URL  → https://tu-backend.ondigitalocean.app/api/v1/auth/discord/callback
+DEVTALLES_GUILD_ID    → 1130900724499365958
+ANTHROPIC_API_KEY     → de console.anthropic.com
+```
+
+### Paso 3 — Actualizar Discord OAuth2
+
+```
+discord.com/developers/applications
+  → Tu app → OAuth2 → Redirects
+  → Agregar: https://tu-backend.ondigitalocean.app/api/v1/auth/discord/callback
+```
+
+### Checklist pre-entrega
+
+```
+[ ] PostgreSQL creado en DigitalOcean
+[ ] Migrations ejecutadas correctamente
+[ ] Backend responde en /api/v1/docs (Swagger visible)
 [ ] GET /api/v1/auth/discord redirige a Discord correctamente
-[ ] DISCORD_CALLBACK_URL apunta a la URL de producción
-[ ] Variables de entorno configuradas (sin valores de ejemplo)
-[ ] Supabase schema ejecutado y cursos semilla cargados
-[ ] Frontend apunta al backend de producción
+[ ] DISCORD_CALLBACK_URL apunta a la URL real de producción
+[ ] Frontend apunta al backend de producción en VITE_API_URL
+[ ] Login con Discord funciona end-to-end
+[ ] Cuestionario genera ruta con IA
+[ ] Progreso de cursos se guarda correctamente
 [ ] No hay commits después del 28 sep 10:00AM GMT-6
 ```
 
@@ -549,24 +861,77 @@ docker compose up -d --build
 ## Ramas de Git
 
 ```
-main              ← rama principal, código en producción
-develop           ← integración de features
-├── feature/auth          ← módulo de autenticación Discord
-├── feature/courses       ← catálogo de cursos
-├── feature/assessments   ← cuestionario + integración IA
-├── feature/learning-paths ← rutas y progreso
-└── feature/docker        ← configuración Docker y deploy
+main                    ← producción (protegida)
+develop                 ← integración
+├── feature/auth        ← Discord OAuth2 + JWT
+├── feature/courses     ← catálogo y filtros
+├── feature/assessments ← cuestionario + IA
+├── feature/paths       ← rutas y progreso
+├── feature/migrations  ← schema y seeds TypeORM
+└── feature/docker      ← Dockerfile y deploy
 ```
 
-**Flujo de trabajo:**
+**Flujo:**
 ```
-feature/* → PR → develop → PR → main
+feature/* → PR a develop → revisión → merge → PR a main → deploy automático
 ```
 
-Cada PR debe tener:
-- Descripción del cambio
-- Al menos 1 reviewer
-- Tests pasando (si aplica)
+Cada PR debe incluir:
+- Descripción clara del cambio
+- Migrations si hay cambios en el schema
+- Al menos 1 reviewer del equipo
+
+---
+
+## Costos
+
+### Stack completo en DigitalOcean
+
+| Servicio | Plan | Precio/mes |
+|---|---|---|
+| App Platform — Backend | Basic (512MB) | $5.00 |
+| App Platform — Frontend | Static Site | $0.00 |
+| Managed PostgreSQL | Basic 1GB | $15.00 |
+| **Total** | | **$20.00/mes** |
+
+### Para el hackathon (14 días)
+
+DigitalOcean otorga **$200 en créditos gratuitos** a cuentas nuevas válidos por 60 días.
+
+```
+Costo real del hackathon = $0.00 💚
+(los $200 de crédito cubren ampliamente los 14 días)
+```
+
+---
+
+## Dependencias principales
+
+```json
+{
+  "dependencies": {
+    "@nestjs/common": "^10.0.0",
+    "@nestjs/config": "^3.0.0",
+    "@nestjs/jwt": "^10.0.0",
+    "@nestjs/passport": "^10.0.0",
+    "@nestjs/swagger": "^7.0.0",
+    "@nestjs/typeorm": "^10.0.0",
+    "@anthropic-ai/sdk": "^0.24.0",
+    "typeorm": "^0.3.20",
+    "pg": "^8.11.0",
+    "passport": "^0.7.0",
+    "passport-discord": "^0.1.4",
+    "passport-jwt": "^4.0.1",
+    "class-validator": "^0.14.0",
+    "class-transformer": "^0.5.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.0.0",
+    "typeorm-ts-node-commonjs": "^0.3.20",
+    "typescript": "^5.1.3"
+  }
+}
+```
 
 ---
 
