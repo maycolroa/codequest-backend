@@ -82,6 +82,26 @@ nest new codequest-backend
 
 ---
 
+### 2026-09-16 — Instalación de dependencias del proyecto (spec 01)
+
+**[CHORE]** Instaladas las dependencias de producción y desarrollo definidas en `specs/01-instalacion-dependencias.md`:
+- `@nestjs/typeorm`, `typeorm`, `pg` — ORM y driver PostgreSQL
+- `@nestjs/config`, `joi` — variables de entorno y su validación (el `validationSchema` se escribe al configurar `ConfigModule`, fuera de este spec)
+- `@nestjs/jwt`, `@nestjs/passport`, `passport`, `passport-discord`, `passport-jwt` — autenticación JWT + OAuth2 Discord
+- `@anthropic-ai/sdk` — integración Claude AI
+- `class-validator`, `class-transformer` — validación de DTOs
+- `@nestjs/swagger` — documentación OpenAPI (trae `swagger-ui-dist` propio, no se instaló `swagger-ui-express` aparte)
+- `helmet` — cabeceras de seguridad HTTP
+- DevDependencies: `@types/passport`, `@types/passport-discord`, `@types/passport-jwt`
+
+**[FIX]** Corregida la lista de comandos de la tarea "Instalar dependencias del proyecto" en `TASKS.md`, que estaba incompleta: le faltaban `passport` (peer dependency real de `@nestjs/passport`, `passport-discord` y `passport-jwt`) y `@types/passport`.
+
+**[CHORE]** Decisión explícita: no se instala `express-session` — el proyecto es JWT stateless (DEC-004 en `DECISIONS.md`), la Discord strategy se registrará con `session: false`.
+
+**[CHORE]** Verificado con `npm audit`: 5 vulnerabilidades preexistentes (2 low, 1 moderate, 2 high), todas originadas en `@nestjs/mau` (devDependency ya presente antes de este spec) — ninguna introducida por las dependencias instaladas aquí.
+
+---
+
 ### PRÓXIMAS ENTRADAS — Agregar aquí
 
 <!--

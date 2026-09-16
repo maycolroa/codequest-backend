@@ -1,6 +1,6 @@
 # 01 — Instalación de dependencias del proyecto
 
-**Estado:** aprobado
+**Estado:** implementado
 **Depende de:** —
 **Fecha:** 2026-09-16
 
@@ -81,15 +81,15 @@ Cada paso deja el proyecto en estado compilable (`npm run build` y `tsc --noEmit
 
 ## Criterios de aceptación
 
-- [ ] `package.json` → `dependencies` incluye exactamente: `@nestjs/typeorm`, `typeorm`, `pg`, `@nestjs/config`, `joi`, `@nestjs/jwt`, `@nestjs/passport`, `passport`, `passport-discord`, `passport-jwt`, `@anthropic-ai/sdk`, `class-validator`, `class-transformer`, `@nestjs/swagger`, `helmet`.
-- [ ] `package.json` → `devDependencies` incluye: `@types/passport`, `@types/passport-discord`, `@types/passport-jwt`.
-- [ ] `npm install` termina sin errores de peer dependency no resuelto.
-- [ ] `npm run build` compila sin errores.
-- [ ] `tsc --noEmit` no reporta errores.
-- [ ] `npm run start:dev` levanta el servidor sin errores de módulo faltante.
-- [ ] `npm audit` no reporta vulnerabilidades altas/críticas sin revisar.
-- [ ] `docs/TASKS.md` tiene la tarea marcada como completada y la lista de comandos corregida (incluye `passport`, tipos, `helmet`, `joi`).
-- [ ] `docs/CHANGELOG.md` tiene una entrada nueva documentando la instalación.
+- [x] `package.json` → `dependencies` incluye exactamente: `@nestjs/typeorm`, `typeorm`, `pg`, `@nestjs/config`, `joi`, `@nestjs/jwt`, `@nestjs/passport`, `passport`, `passport-discord`, `passport-jwt`, `@anthropic-ai/sdk`, `class-validator`, `class-transformer`, `@nestjs/swagger`, `helmet`.
+- [x] `package.json` → `devDependencies` incluye: `@types/passport`, `@types/passport-discord`, `@types/passport-jwt`.
+- [x] `npm install` termina sin errores de peer dependency no resuelto.
+- [x] `npm run build` compila sin errores.
+- [x] `tsc --noEmit` no reporta errores.
+- [x] `npm run start:dev` levanta el servidor sin errores de módulo faltante.
+- [x] `npm audit` no reporta vulnerabilidades altas/críticas sin revisar.
+- [x] `docs/TASKS.md` tiene la tarea marcada como completada y la lista de comandos corregida (incluye `passport`, tipos, `helmet`, `joi`).
+- [x] `docs/CHANGELOG.md` tiene una entrada nueva documentando la instalación.
 - [ ] `package-lock.json` queda commiteado junto con `package.json`.
 
 ---
