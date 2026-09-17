@@ -33,8 +33,5 @@ Thumbs.db
 # Tests
 coverage/
 
-# Docker
-.dockerignore
-
 # ext color
 vscode

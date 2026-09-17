@@ -44,9 +44,10 @@ El backend expone una API REST que permite:
 
 | Capa           | Tecnología                       | Versión          |
 | -------------- | --------------------------------- | ----------------- |
-| Runtime        | Node.js                           | 20 LTS            |
-| Framework      | NestJS                            | 10                |
-| Lenguaje       | TypeScript                        | 5.1               |
+| Runtime        | Node.js (Docker)                  | 22.22.3           |
+| Gestor         | npm                               | 10.9.8 (Docker)   |
+| Framework      | NestJS                            | 12                |
+| Lenguaje       | TypeScript                        | 6                 |
 | ORM            | TypeORM                           | 0.3.x             |
 | Base de datos  | PostgreSQL (DigitalOcean Managed) | 17                |
 | Autenticación | Discord OAuth2 + JWT              | —                |
@@ -707,17 +708,15 @@ ANTHROPIC_API_KEY=sk-ant-api03-...
 Antes de empezar verifica que tienes instalado:
 
 ```bash
-node --version    # debe mostrar v20.x.x o superior
-npm --version     # debe mostrar 9.x.x o superior
 docker --version  # debe mostrar Docker version 24.x.x o superior
-nest --version    # debe mostrar 10.x.x — si no: sudo npm i -g @nestjs/cli
+docker compose version
 ```
 
 Si algo falta:
 
-- **Node.js 20:** https://nodejs.org → descargar versión LTS
 - **Docker:** https://docs.docker.com/get-docker
-- **NestJS CLI:** `sudo npm i -g @nestjs/cli`
+
+> Node.js, npm y NestJS se ejecutan dentro del contenedor; no necesitas instalarlos en tu equipo para levantar la API.
 
 ---
 
@@ -730,17 +729,7 @@ cd codequest-backend
 
 ---
 
-### Paso 2 — Instalar dependencias
-
-```bash
-npm install
-```
-
-> ⏳ Tarda ~1 minuto la primera vez. Al terminar verás `added X packages`.
-
----
-
-### Paso 3 — Configurar variables de entorno
+### Paso 2 — Configurar variables de entorno
 
 ```bash
 # Copiar la plantilla
@@ -790,43 +779,30 @@ ANTHROPIC_API_KEY=sk-ant-api03-...
 
 ---
 
-### Paso 4 — Levantar PostgreSQL con Docker
+### Paso 3 — Levantar API y PostgreSQL con Docker
 
 ```bash
-# Levantar solo la base de datos en segundo plano
-docker compose up -d postgres
+# Construye la API con Node 22.22.3 y levanta ambos servicios.
+# Docker publica la API en 3001 para no ocupar el 3000 local.
+docker compose up --build -d
 ```
 
 Verificar que está corriendo:
 
 ```bash
 docker ps
-# Debe mostrar: codequest-db   Up X seconds
+# Debe mostrar: codequest-api-dev y codequest-postgres-dev
 ```
 
 > 💡 La primera vez descarga la imagen de PostgreSQL (~80MB). Las siguientes veces es instantáneo.
 
 ---
 
-### Paso 5 — Agregar scripts de migrations al package.json
-
-Antes de correr las migrations, verifica que el `package.json` tiene estos scripts.
-Si no están, agrégalos en la sección `"scripts"`:
-
-```json
-"migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/data-source.ts",
-"migration:run":      "typeorm-ts-node-commonjs migration:run -d src/config/data-source.ts",
-"migration:revert":   "typeorm-ts-node-commonjs migration:revert -d src/config/data-source.ts",
-"migration:show":     "typeorm-ts-node-commonjs migration:show -d src/config/data-source.ts"
-```
-
----
-
-### Paso 6 — Ejecutar las migrations
+### Paso 4 — Ejecutar las migrations
 
 ```bash
 # Crea todas las tablas en la base de datos
-npm run migration:run
+docker compose exec api npm run migration:run
 ```
 
 Debes ver algo como:
@@ -845,30 +821,20 @@ Si hay error de conexión, verifica que Docker está corriendo (`docker ps`).
 
 ---
 
-### Paso 7 — Iniciar el servidor en modo desarrollo
+La API ya queda iniciada en modo desarrollo y con hot reload. Para ver sus logs:
 
 ```bash
-npm run start:dev
-```
-
-Debes ver:
-
-```
-[Nest] LOG  Starting Nest application...
-[Nest] LOG  AppModule dependencies initialized
-[Nest] LOG  AuthModule dependencies initialized
-[Nest] LOG  CoursesModule dependencies initialized
-[Nest] LOG  Nest application successfully started +Xms
+docker compose logs -f api
 ```
 
 ---
 
-### Paso 8 — Verificar que todo funciona
+### Paso 5 — Verificar que todo funciona
 
 Abre el navegador y ve a:
 
 ```
-http://localhost:3000/api/v1/docs
+http://localhost:3001/docs
 ```
 
 Debes ver la documentación **Swagger UI** con todos los endpoints del proyecto.
@@ -882,7 +848,7 @@ curl http://localhost:3000/api/v1/health
 
 ---
 
-### Paso 9 — Configurar Discord OAuth2 (para probar el login)
+### Paso 6 — Configurar Discord OAuth2 (para probar el login)
 
 1. Ir a [discord.com/developers/applications](https://discord.com/developers/applications)
 2. Seleccionar tu aplicación → **OAuth2** → **Redirects**
@@ -895,17 +861,14 @@ curl http://localhost:3000/api/v1/health
 ### Comandos útiles del día a día
 
 ```bash
-# Iniciar servidor con hot-reload
-npm run start:dev
-
-# Detener PostgreSQL
+# Detener API y PostgreSQL
 docker compose down
 
-# Ver logs de PostgreSQL
-docker compose logs -f postgres
+# Ver logs de la API
+docker compose logs -f api
 
 # Revertir última migration
-npm run migration:revert
+docker compose exec api npm run migration:revert
 
 # Ver estado de migrations
 npm run migration:show
@@ -964,27 +927,9 @@ npm run migration:run
 
 ## Docker
 
-### Dockerfile (multi-stage)
+El `Dockerfile` usa `node:22.22.3-alpine`, instala con `npm ci` y tiene etapas separadas para desarrollo y producción. Compose usa la etapa de desarrollo; los cambios en `src/` se recargan automáticamente.
 
-```dockerfile
-# ── Stage 1: Build ───────────────────────────────────
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-# ── Stage 2: Production ──────────────────────────────
-FROM node:20-alpine AS production
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
-COPY --from=builder /app/dist ./dist
-EXPOSE 3000
-# Corre migrations y luego levanta el servidor
-CMD ["sh", "-c", "node dist/node_modules/.bin/typeorm migration:run -d dist/config/data-source.js && node dist/main"]
-```
+La API del contenedor escucha internamente en `3000` y se publica en `http://localhost:3001` por defecto. Si necesitas otro puerto externo, configura `API_PORT` en `.env`; `PORT` queda reservado para Nest y permite ejecutar `npm run start:dev` localmente en `3000` al mismo tiempo.
 
 **Por qué multi-stage:** la imagen final solo tiene el código compilado y dependencias de producción. Resultado: imagen ~150MB en vez de ~600MB.
 

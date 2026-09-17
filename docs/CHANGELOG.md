@@ -27,6 +27,23 @@ Agrega una entrada así después de cada bloque de trabajo:
 
 ---
 
+### 2026-09-16 — Auth con Discord
+
+**[FEAT]** Creado `AuthModule` con autenticación Discord OAuth2 y JWT.
+- Agregadas las estrategias de Discord y JWT, el guard `JwtAuthGuard` y el decorador `@GetUser()`.
+- Agregados `GET /api/v1/auth/discord`, `GET /api/v1/auth/discord/callback` y `GET /api/v1/auth/me`.
+- El perfil se identifica de forma estable por `discordId`; no se implementó registro por contraseña.
+
+**[MIGRATION]** `1726000000000-CreateProfiles` — tabla `profiles` con identidad de Discord y timestamps.
+
+**[CHORE]** Configurados `ConfigModule`, TypeORM, prefijo `/api/v1`, CORS, validación global, Swagger en `/docs` y `.env.example`.
+
+**[CHORE]** Agregado `docker-compose.yml` para PostgreSQL 17 local con volumen persistente y healthcheck.
+
+**[CHORE]** Configurado DataSource de TypeORM y scripts para ejecutar o revertir migraciones de Auth.
+
+---
+
 ### 2026-09-14 — Setup inicial del proyecto
 
 **[CHORE]** Inicializado proyecto NestJS con CLI
@@ -99,6 +116,13 @@ nest new codequest-backend
 **[CHORE]** Decisión explícita: no se instala `express-session` — el proyecto es JWT stateless (DEC-004 en `DECISIONS.md`), la Discord strategy se registrará con `session: false`.
 
 **[CHORE]** Verificado con `npm audit`: 5 vulnerabilidades preexistentes (2 low, 1 moderate, 2 high), todas originadas en `@nestjs/mau` (devDependency ya presente antes de este spec) — ninguna introducida por las dependencias instaladas aquí.
+### 2026-09-17 — Versionamiento reproducible de herramientas
+
+**[FIX]** El runtime queda fijado en la imagen `node:22.22.3-alpine` mediante Docker. `docker compose up --build` levanta tanto la API como PostgreSQL, con la API conectada a `postgres_db_dev` dentro de la red de Compose. `package-lock.json` permanece como la fuente de versiones exactas y la imagen instala dependencias con `npm ci`.
+
+**[FIX]** El puerto externo de la API de Docker se separó en `API_PORT` (por defecto `3001`); `PORT=3000` queda disponible para ejecutar Nest localmente sin colisión.
+
+**[FIX]** Se alineó el README con las versiones realmente usadas por el proyecto: NestJS 12 y TypeScript 6. No se debe integrar la versión `typeorm@^1.1.1` de la rama `spec-01-instalacion-dependencias`; las migraciones del proyecto requieren TypeORM 0.3.x.
 
 ---
 
