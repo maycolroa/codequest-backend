@@ -62,7 +62,7 @@
     CMD ["sh", "-c", "npm run migration:run && node dist/main"]
     ```
 
-- [ ] **Crear `docker-compose.yml`**
+- [x] **Crear `docker-compose.yml`**
   - Servicios necesarios: `postgres` (imagen `postgres:17-alpine`) para desarrollo local; opcionalmente un servicio `backend` que build-ee desde el `Dockerfile` para levantar todo junto.
   - Variables de entorno del postgres local: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` (deben coincidir con lo que use `DATABASE_URL` en `.env`).
   - Puerto: mapear `5432:5432`.
@@ -82,18 +82,18 @@
 - [ ] Crear aplicación en Discord Developer Portal y obtener credenciales
 
 ### Módulo Auth
-- [ ] Crear `AuthModule` con imports correctos
-- [ ] Implementar `DiscordStrategy` (passport-discord)
-- [ ] Implementar `JwtStrategy` (passport-jwt)
-- [ ] Crear `AuthService.findOrCreateUser()` con TypeORM upsert
-- [ ] Crear `AuthService.generateToken()` con JWT
-- [ ] Crear `AuthController` con endpoints /discord, /callback, /me
+- [x] Crear `AuthModule` con imports correctos
+- [x] Implementar `DiscordStrategy` (passport-discord)
+- [x] Implementar `JwtStrategy` (passport-jwt)
+- [x] Crear `AuthService.findOrCreateUser()` con TypeORM upsert
+- [x] Crear `AuthService.generateToken()` con JWT
+- [x] Crear `AuthController` con endpoints /discord, /callback, /me
 - [ ] Probar flujo completo Discord OAuth2 → JWT → /me
 - [ ] Actualizar CHANGELOG
 
 ### Base de datos — Entidades y Migrations
-- [ ] Crear entidad `Profile` con decoradores TypeORM
-- [ ] Crear migration `CreateProfiles`
+- [x] Crear entidad `Profile` con decoradores TypeORM
+- [x] Crear migration `CreateProfiles`
 - [ ] Crear entidad `Course` con array de tags
 - [ ] Crear migration `CreateCourses`
 - [ ] Crear entidad `UserAssessment`

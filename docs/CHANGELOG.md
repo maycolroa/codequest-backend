@@ -27,6 +27,23 @@ Agrega una entrada así después de cada bloque de trabajo:
 
 ---
 
+### 2026-09-16 — Auth con Discord
+
+**[FEAT]** Creado `AuthModule` con autenticación Discord OAuth2 y JWT.
+- Agregadas las estrategias de Discord y JWT, el guard `JwtAuthGuard` y el decorador `@GetUser()`.
+- Agregados `GET /api/v1/auth/discord`, `GET /api/v1/auth/discord/callback` y `GET /api/v1/auth/me`.
+- El perfil se identifica de forma estable por `discordId`; no se implementó registro por contraseña.
+
+**[MIGRATION]** `1726000000000-CreateProfiles` — tabla `profiles` con identidad de Discord y timestamps.
+
+**[CHORE]** Configurados `ConfigModule`, TypeORM, prefijo `/api/v1`, CORS, validación global, Swagger en `/docs` y `.env.example`.
+
+**[CHORE]** Agregado `docker-compose.yml` para PostgreSQL 17 local con volumen persistente y healthcheck.
+
+**[CHORE]** Configurado DataSource de TypeORM y scripts para ejecutar o revertir migraciones de Auth.
+
+---
+
 ### 2026-09-14 — Setup inicial del proyecto
 
 **[CHORE]** Inicializado proyecto NestJS con CLI
