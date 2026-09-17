@@ -5,6 +5,11 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.22.3 <25",
+    "npm": ">=10.9.3 <12"
+  },
+  "packageManager": "npm@10.9.8",
   "scripts": {
     "build": "nest build",
     "deploy": "nest deploy",

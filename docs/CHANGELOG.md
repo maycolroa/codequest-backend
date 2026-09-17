@@ -99,6 +99,16 @@ nest new codequest-backend
 
 ---
 
+### 2026-09-17 — Versionamiento reproducible de herramientas
+
+**[FIX]** El runtime queda fijado en la imagen `node:22.22.3-alpine` mediante Docker. `docker compose up --build` levanta tanto la API como PostgreSQL, con la API conectada a `postgres_db_dev` dentro de la red de Compose. `package-lock.json` permanece como la fuente de versiones exactas y la imagen instala dependencias con `npm ci`.
+
+**[FIX]** El puerto externo de la API de Docker se separó en `API_PORT` (por defecto `3001`); `PORT=3000` queda disponible para ejecutar Nest localmente sin colisión.
+
+**[FIX]** Se alineó el README con las versiones realmente usadas por el proyecto: NestJS 12 y TypeScript 6. No se debe integrar la versión `typeorm@^1.1.1` de la rama `spec-01-instalacion-dependencias`; las migraciones del proyecto requieren TypeORM 0.3.x.
+
+---
+
 ### PRÓXIMAS ENTRADAS — Agregar aquí
 
 <!--
