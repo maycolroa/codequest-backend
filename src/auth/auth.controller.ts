@@ -1,4 +1,4 @@
-import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -9,6 +9,9 @@ import { Profile } from './entities/profile.entity';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
 import { AuthenticatedDiscordUser } from './interfaces/authenticated-discord-user.interface';
+import { LoginDto } from './dto/login.dto';
+import { RegisterDto } from './dto/register.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -37,6 +40,37 @@ export class AuthController {
     const redirectUrl = new URL(frontendUrl);
     redirectUrl.searchParams.set('token', token);
     response.redirect(redirectUrl.toString());
+  }
+
+  @Post('register')
+  @ApiOperation({ summary: 'Crear una cuenta con correo y contraseña' })
+  @ApiResponse({ status: 201, description: 'Cuenta creada y JWT emitido' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos o correo ya registrado' })
+  register(@Body() registerDto: RegisterDto): Promise<{ profile: Profile; token: string }> {
+    return this.authService.register(registerDto);
+  }
+
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Iniciar sesión con correo y contraseña' })
+  @ApiResponse({ status: 200, description: 'JWT emitido' })
+  @ApiResponse({ status: 401, description: 'Credenciales inválidas o cuenta desactivada' })
+  login(@Body() loginDto: LoginDto): Promise<{ profile: Profile; token: string }> {
+    return this.authService.login(loginDto);
+  }
+
+  @Post('password/change')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cambiar la contraseña de la cuenta local' })
+  @ApiResponse({ status: 204, description: 'Contraseña actualizada' })
+  @ApiResponse({ status: 401, description: 'JWT o contraseña actual inválidos' })
+  async changePassword(
+    @GetUser('id') userId: string,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ): Promise<void> {
+    await this.authService.changePassword(userId, changePasswordDto);
   }
 
   @Get('me')

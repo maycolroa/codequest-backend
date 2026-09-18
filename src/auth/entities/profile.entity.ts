@@ -11,14 +11,21 @@ export class Profile {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ name: 'discord_id', unique: true })
-  discordId: string;
+  @Column({ name: 'discord_id', type: 'varchar', unique: true, nullable: true })
+  discordId: string | null;
 
   @Column()
   username: string;
 
   @Column({ type: 'varchar', nullable: true })
   email: string | null;
+
+  /** Stored exclusively as a salted password hash; never selected by default. */
+  @Column({ name: 'password_hash', type: 'varchar', nullable: true, select: false })
+  passwordHash: string | null;
+
+  @Column({ name: 'is_active', default: true })
+  isActive: boolean;
 
   @Column({ name: 'avatar_url', type: 'varchar', nullable: true })
   avatarUrl: string | null;

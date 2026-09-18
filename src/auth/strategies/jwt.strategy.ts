@@ -31,6 +31,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Token no válido');
     }
 
+    if (!profile.isActive) {
+      throw new UnauthorizedException('Esta cuenta está desactivada');
+    }
+
     return profile;
   }
 }
