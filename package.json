@@ -20,6 +20,7 @@
     "start:prod": "node dist/main",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/auth/config/data-source.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/auth/config/data-source.ts",
+    "migration:show": "typeorm-ts-node-commonjs migration:show -d src/auth/config/data-source.ts",
     "lint": "oxlint --type-aware src/ test/",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
     "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --watch",

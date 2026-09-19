@@ -7,7 +7,10 @@ export const getDatabaseConfig = (
   type: 'postgres',
   url: configService.getOrThrow<string>('DATABASE_URL'),
   autoLoadEntities: true,
-  migrations: [__dirname + '/../migrations/*{.ts,.js}'],
+  migrations: [
+    __dirname + '/../migrations/*{.ts,.js}',
+    __dirname + '/../../courses/migrations/*{.ts,.js}',
+  ],
   synchronize: false,
   ssl:
     configService.get<string>('NODE_ENV') === 'production'
