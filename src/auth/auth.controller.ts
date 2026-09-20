@@ -10,6 +10,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
 import { AuthenticatedDiscordUser } from './interfaces/authenticated-discord-user.interface';
 import { LoginDto } from './dto/login.dto';
+import { MeResponseDto } from './dto/me-response.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 
@@ -35,10 +36,17 @@ export class AuthController {
     @Req() request: Request & { user: AuthenticatedDiscordUser },
     @Res() response: Response,
   ): Promise<void> {
-    const { token } = await this.authService.loginWithDiscord(request.user);
     const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL');
-    const redirectUrl = new URL(frontendUrl);
-    redirectUrl.searchParams.set('token', token);
+    const redirectUrl = new URL('/auth/callback', frontendUrl);
+
+    try {
+      const { token } = await this.authService.loginWithDiscord(request.user);
+      redirectUrl.searchParams.set('token', token);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'No se pudo iniciar sesión con Discord';
+      redirectUrl.searchParams.set('error', message);
+    }
+
     response.redirect(redirectUrl.toString());
   }
 
@@ -77,9 +85,9 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Obtener el perfil autenticado' })
-  @ApiResponse({ status: 200, description: 'Perfil del usuario autenticado', type: Profile })
+  @ApiResponse({ status: 200, description: 'Perfil del usuario autenticado', type: MeResponseDto })
   @ApiResponse({ status: 401, description: 'JWT ausente, inválido o expirado' })
-  me(@GetUser('id') userId: string): Promise<Profile> {
-    return this.authService.getProfile(userId);
+  async me(@GetUser('id') userId: string): Promise<MeResponseDto> {
+    return MeResponseDto.fromProfile(await this.authService.getProfile(userId));
   }
 }
