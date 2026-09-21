@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AuthModule } from './auth/auth.module';
 import { getDatabaseConfig } from './auth/config/database.config';
+import { CoursesModule } from './courses/courses.module';
 
 
 @Module({
@@ -14,6 +15,7 @@ import { getDatabaseConfig } from './auth/config/database.config';
       useFactory: getDatabaseConfig,
     }),
     AuthModule,
+    CoursesModule,
   ],
   controllers: [],
   providers: [],

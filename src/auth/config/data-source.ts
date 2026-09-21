@@ -3,6 +3,9 @@ import { DataSource } from 'typeorm';
 
 import { Profile } from '../entities/profile.entity';
 import { CreateProfiles1726000000000 } from '../migrations/1726000000000-CreateProfiles';
+import { AddLocalAuthentication1726000000001 } from '../migrations/1726000000001-AddLocalAuthentication';
+import { CreateCourses1726000000002 } from '../../courses/migrations/1726000000002-CreateCourses';
+import { Course } from '../../courses/entities/course.entity';
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -13,8 +16,12 @@ if (!databaseUrl) {
 const authDataSource = new DataSource({
   type: 'postgres',
   url: databaseUrl,
-  entities: [Profile],
-  migrations: [CreateProfiles1726000000000],
+  entities: [Profile, Course],
+  migrations: [
+    CreateProfiles1726000000000,
+    AddLocalAuthentication1726000000001,
+    CreateCourses1726000000002,
+  ],
   synchronize: false,
   ssl:
     process.env.NODE_ENV === 'production'
