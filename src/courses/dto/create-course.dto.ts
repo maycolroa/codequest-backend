@@ -2,7 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
   IsBoolean,
-  IsIn,
+  IsEnum,
   IsInt,
   IsOptional,
   IsString,
@@ -10,6 +10,9 @@ import {
   Max,
   Min,
 } from 'class-validator';
+
+import { CourseCategory } from '../enums/course-category.enum';
+import { CourseLevel } from '../enums/course-level.enum';
 
 export class CreateCourseDto {
   @ApiProperty({ example: 'NestJS desde cero' })
@@ -20,23 +23,25 @@ export class CreateCourseDto {
   @IsString()
   description: string;
 
-  @ApiProperty({ enum: ['frontend', 'backend', 'fullstack', 'devops', 'mobile', 'databases'] })
-  @IsIn(['frontend', 'backend', 'fullstack', 'devops', 'mobile', 'databases'])
-  category: string;
+  @ApiProperty({ enum: CourseCategory })
+  @IsEnum(CourseCategory)
+  category: CourseCategory;
 
-  @ApiProperty({ enum: ['beginner', 'intermediate', 'advanced'] })
-  @IsIn(['beginner', 'intermediate', 'advanced'])
-  level: string;
+  @ApiProperty({ enum: CourseLevel })
+  @IsEnum(CourseLevel)
+  level: CourseLevel;
 
-  @ApiProperty({ example: 'https://cursos.devtalles.com/courses/nest' })
+  @ApiPropertyOptional({ example: 'https://cursos.devtalles.com/courses/nest' })
+  @IsOptional()
   @IsUrl()
-  url: string;
+  url?: string;
 
-  @ApiProperty({ example: 40, minimum: 1, maximum: 1000 })
+  @ApiPropertyOptional({ example: 40, minimum: 1, maximum: 1000 })
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(1000)
-  durationHours: number;
+  durationHours?: number;
 
   @ApiProperty({ example: ['nestjs', 'typescript', 'backend'] })
   @IsArray()

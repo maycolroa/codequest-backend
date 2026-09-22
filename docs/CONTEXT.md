@@ -55,10 +55,11 @@ updatedAt:  Date
 id:            uuid (PK)
 title:         string
 description:   string
-category:      string  // 'frontend'|'backend'|'fullstack'|'devops'|'mobile'|'databases'
-level:         string  // 'beginner'|'intermediate'|'advanced'
-url:           string
-durationHours: number
+ slug:          string (UNIQUE)
+ category:      string  // backend|architecture|frontend|mobile|programming_languages|databases|devops|ai|legacy
+ level:         string  // 'beginner'|'intermediate'|'advanced'
+ url:           string (nullable hasta confirmar la URL oficial)
+ durationHours: number (nullable hasta confirmar la duración)
 tags:          string[]
 isActive:      boolean (default: true)
 createdAt:     Date
@@ -91,23 +92,47 @@ userProgress:   UserProgress[] (OneToMany)
 createdAt:      Date
 ```
 
-### `UserProgress` → tabla `user_progress`
+### `UserCourseProgress` → tabla `user_course_progress`
 ```typescript
 id:             uuid (PK)
-user:           Profile (FK)
-learningPath:   LearningPath (FK)
+profile:        Profile (FK)
 course:         Course (FK)
-order:          number
-completed:      boolean (default: false)
+status:         'not_started'|'in_progress'|'completed'
+progressPercent:number (0-100)
+startedAt:      Date (nullable)
 completedAt:    Date (nullable)
 createdAt:      Date
-UNIQUE: (learningPath, course)
+updatedAt:      Date
+UNIQUE: (profile, course)
+```
+
+### `CourseLesson` → tabla `course_lessons`
+```typescript
+id:        uuid (PK)
+course:    Course (FK)
+title:     string
+content:   string
+videoUrl:  string (nullable)
+position:  number
+isPreview: boolean
+```
+
+### `UserLessonProgress` → tabla `user_lesson_progress`
+```typescript
+id:          uuid (PK)
+profile:     Profile (FK)
+lesson:      CourseLesson (FK)
+completedAt: Date
+UNIQUE: (profile, lesson)
 ```
 
 ### Diagrama de relaciones
 ```
 Profile ──< UserAssessment
-Profile ──< LearningPath ──< UserProgress >── Course
+Profile ──< LearningPath
+Profile ──< UserCourseProgress >── Course
+Course ──< CourseLesson
+Profile ──< UserLessonProgress >── CourseLesson
 ```
 
 ---
@@ -126,6 +151,13 @@ GET  /api/v1/auth/me                → perfil del usuario (JWT)
 GET  /api/v1/courses                → lista cursos (JWT) | ?category= &level=
 GET  /api/v1/courses/categories     → categorías únicas (JWT)
 GET  /api/v1/courses/:id            → detalle de curso (JWT)
+POST /api/v1/courses/:id/enroll     → inscribirme a un curso (JWT)
+GET  /api/v1/courses/my-progress    → mis cursos inscritos (JWT)
+GET  /api/v1/courses/:id/lessons    → lecciones de un curso (JWT)
+POST /api/v1/courses/:id/lessons    → crear lección (superadmin)
+PATCH /api/v1/courses/lessons/:lessonId → editar lección (superadmin)
+DELETE /api/v1/courses/lessons/:lessonId → eliminar lección y recalcular avances (superadmin)
+POST /api/v1/courses/lessons/:lessonId/complete → completar lección y recalcular avance (JWT)
 ```
 
 ### Assessments

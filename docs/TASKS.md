@@ -89,29 +89,29 @@
 - [x] Crear `AuthService.generateToken()` con JWT
 - [x] Crear `AuthController` con endpoints /discord, /callback, /me
 - [x] Probar flujo completo Discord OAuth2 → JWT → /me
-- [ ] Actualizar CHANGELOG
+- [x] Actualizar CHANGELOG
 
 ### Base de datos — Entidades y Migrations
 - [x] Crear entidad `Profile` con decoradores TypeORM
 - [x] Crear migration `CreateProfiles`
-- [ ] Crear entidad `Course` con array de tags
-- [ ] Crear migration `CreateCourses`
+- [x] Crear entidad `Course` con array de tags
+- [x] Crear migration `CreateCourses`
 - [ ] Crear entidad `UserAssessment`
 - [ ] Crear migration `CreateAssessments`
 - [ ] Crear entidad `LearningPath` con JSONB coursesOrder
 - [ ] Crear migration `CreateLearningPaths`
-- [ ] Crear entidad `UserProgress` con UNIQUE constraint
-- [ ] Crear migration `CreateUserProgress`
-- [ ] Crear migration seed con 15 cursos de DevTalles
-- [ ] Verificar todas las relaciones funcionan correctamente
+- [x] Crear entidad `UserProgress` con UNIQUE constraint
+- [x] Crear migration `CreateUserProgress`
+- [x] Crear migration seed con catálogo de cursos de DevTalles
+- [x] Verificar todas las relaciones funcionan correctamente
 
 ### Módulo Courses
-- [ ] Crear `CoursesModule`
-- [ ] Crear `CoursesService.findAll()` con filtros dinámicos
-- [ ] Crear `CoursesService.findById()`
-- [ ] Crear `CoursesService.getCategories()`
-- [ ] Crear `CoursesService.getCatalogSummary()` para IA
-- [ ] Crear `CoursesController` con Swagger completo
+- [x] Crear `CoursesModule`
+- [x] Crear `CoursesService.findAll()` con filtros dinámicos
+- [x] Crear `CoursesService.findById()`
+- [x] Crear `CoursesService.getCategories()`
+- [x] Crear `CoursesService.getCatalogSummary()` para IA
+- [x] Crear `CoursesController` con Swagger completo
 - [ ] Probar endpoints con Swagger UI
 
 ### Módulo AI

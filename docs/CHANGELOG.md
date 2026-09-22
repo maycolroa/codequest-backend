@@ -27,6 +27,22 @@ Agrega una entrada así después de cada bloque de trabajo:
 
 ---
 
+### 2026-09-21 — Catálogo y progreso de cursos
+
+**[FEAT]** Organizado el catálogo por categorías y niveles (`beginner`, `intermediate`, `advanced`).
+- Añadidos `slug`, categorías tipadas y validaciones de UUID para los endpoints de cursos.
+- Añadidos endpoints para inscripción y actualización del progreso individual.
+
+**[MIGRATION]** Creadas las migraciones para metadatos de cursos, `user_course_progress` y el seed idempotente del catálogo de DevTalles.
+- `user_course_progress` garantiza una única inscripción por usuario y curso, y valida el porcentaje entre 0 y 100.
+- Se cargan cursos legacy como inactivos para que no sean recomendados por defecto.
+
+**[FEAT]** Añadidas lecciones internas y cálculo automático de avance.
+- El backend recalcula el porcentaje al completar una lección; ya no acepta un porcentaje enviado por el usuario.
+- El CRUD de cursos y lecciones exige `SuperAdminGuard`; las acciones de inscripción y completado permanecen limitadas al perfil autenticado.
+
+---
+
 ### 2026-09-16 — Auth con Discord
 
 **[FEAT]** Creado `AuthModule` con autenticación Discord OAuth2 y JWT.
