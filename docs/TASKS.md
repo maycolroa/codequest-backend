@@ -75,11 +75,11 @@
   - Habilitar CORS para el frontend con `app.enableCors({ origin: process.env.FRONTEND_URL, credentials: true })`.
 
 ### Setup y configuración
-- [ ] Crear repositorio en GitHub y configurar ramas (main, develop)
-- [ ] Configurar GitHub Actions para CI básico (lint + build)
-- [ ] Crear proyecto en DigitalOcean y base de datos PostgreSQL
-- [ ] Configurar variables de entorno en DigitalOcean App Platform
-- [ ] Crear aplicación en Discord Developer Portal y obtener credenciales
+- [x] Crear repositorio en GitHub y configurar ramas (main, develop)
+- [x] Configurar GitHub Actions para CI básico (lint + build)
+- [x] Crear proyecto en DigitalOcean y base de datos PostgreSQL
+- [x] Configurar variables de entorno en DigitalOcean App Platform
+- [x] Crear aplicación en Discord Developer Portal y obtener credenciales
 
 ### Módulo Auth
 - [x] Crear `AuthModule` con imports correctos
@@ -88,7 +88,7 @@
 - [x] Crear `AuthService.findOrCreateUser()` con TypeORM upsert
 - [x] Crear `AuthService.generateToken()` con JWT
 - [x] Crear `AuthController` con endpoints /discord, /callback, /me
-- [ ] Probar flujo completo Discord OAuth2 → JWT → /me
+- [x] Probar flujo completo Discord OAuth2 → JWT → /me
 - [ ] Actualizar CHANGELOG
 
 ### Base de datos — Entidades y Migrations

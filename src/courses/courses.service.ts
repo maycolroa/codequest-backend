@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 
 import { Course } from './entities/course.entity';
 import { CourseFiltersDto } from './dto/course-filters.dto';
+import { CreateCourseDto } from './dto/create-course.dto';
+import { UpdateCourseDto } from './dto/update-course.dto';
 
 export type CourseCatalogSummary = Pick<
   Course,
@@ -16,6 +18,11 @@ export class CoursesService {
     @InjectRepository(Course)
     private readonly coursesRepository: Repository<Course>,
   ) {}
+
+  create(createCourseDto: CreateCourseDto): Promise<Course> {
+    const course = this.coursesRepository.create(createCourseDto);
+    return this.coursesRepository.save(course);
+  }
 
   findAll(filters: CourseFiltersDto): Promise<Course[]> {
     const query = this.coursesRepository
@@ -43,6 +50,18 @@ export class CoursesService {
     }
 
     return course;
+  }
+
+  async update(id: string, updateCourseDto: UpdateCourseDto): Promise<Course> {
+    const course = await this.findById(id);
+    Object.assign(course, updateCourseDto);
+    return this.coursesRepository.save(course);
+  }
+
+  async remove(id: string): Promise<void> {
+    const course = await this.findById(id);
+    course.isActive = false;
+    await this.coursesRepository.save(course);
   }
 
   getCategories(): Promise<string[]> {
