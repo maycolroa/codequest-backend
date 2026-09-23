@@ -10,28 +10,6 @@
 
 ### Configuración inicial del entorno (dependencias, env, Docker, main.ts)
 
-- [ ] **Instalar dependencias del proyecto**
-  - Dependencias principales:
-    ```bash
-    npm install @nestjs/typeorm typeorm pg @nestjs/config @nestjs/jwt @nestjs/passport passport-discord passport-jwt @anthropic-ai/sdk class-validator class-transformer @nestjs/swagger
-    ```
-  - DevDependencies:
-    ```bash
-    npm install -D @types/passport-discord @types/passport-jwt
-    ```
-  - Qué hace cada dependencia:
-    - `@nestjs/typeorm` + `typeorm` + `pg` — conectan NestJS con PostgreSQL vía TypeORM.
-    - `@nestjs/config` — carga y expone las variables de entorno (`.env`).
-    - `@nestjs/jwt` — genera y valida tokens JWT.
-    - `@nestjs/passport` — integra Passport.js con NestJS (guards/strategies).
-    - `passport-discord` — strategy de Passport para OAuth2 con Discord.
-    - `passport-jwt` — strategy de Passport para validar Bearer tokens JWT.
-    - `@anthropic-ai/sdk` — cliente oficial para llamar a la API de Claude.
-    - `class-validator` — decoradores de validación para los DTOs.
-    - `class-transformer` — transforma payloads planos a instancias de clase (DTOs).
-    - `@nestjs/swagger` — genera la documentación OpenAPI/Swagger.
-    - `@types/passport-discord` / `@types/passport-jwt` — tipos TypeScript para ambas strategies.
-
 - [ ] **Crear archivo `.env.example`**
   - Variables requeridas (ver `docs/CONTEXT.md` → sección "Variables de entorno requeridas"), con valores de ejemplo (NO reales):
     ```bash
@@ -175,6 +153,31 @@
 - [x] Inicializar proyecto NestJS ✓ 2026-09-14
 - [x] Crear archivos de documentación (CLAUDE.md, RULES.md, CONTEXT.md, CHANGELOG.md, TASKS.md, DECISIONS.md) ✓ 2026-09-14
 - [x] Primer commit al repositorio ✓ 2026-09-14
+- [x] **Instalar dependencias del proyecto** ✓ 2026-09-16
+  - Dependencias principales:
+    ```bash
+    npm install @nestjs/typeorm typeorm pg @nestjs/config joi @nestjs/jwt @nestjs/passport passport passport-discord passport-jwt @anthropic-ai/sdk class-validator class-transformer @nestjs/swagger helmet
+    ```
+  - DevDependencies:
+    ```bash
+    npm install -D @types/passport @types/passport-discord @types/passport-jwt
+    ```
+  - Qué hace cada dependencia:
+    - `@nestjs/typeorm` + `typeorm` + `pg` — conectan NestJS con PostgreSQL vía TypeORM.
+    - `@nestjs/config` — carga y expone las variables de entorno (`.env`).
+    - `joi` — validación de variables de entorno vía `@nestjs/config` (el `validationSchema` se escribe al configurar `ConfigModule`, fuera de este alcance).
+    - `@nestjs/jwt` — genera y valida tokens JWT.
+    - `@nestjs/passport` — integra Passport.js con NestJS (guards/strategies).
+    - `passport` — peer dependency real de `@nestjs/passport`, `passport-discord` y `passport-jwt`.
+    - `passport-discord` — strategy de Passport para OAuth2 con Discord.
+    - `passport-jwt` — strategy de Passport para validar Bearer tokens JWT.
+    - `@anthropic-ai/sdk` — cliente oficial para llamar a la API de Claude.
+    - `class-validator` — decoradores de validación para los DTOs.
+    - `class-transformer` — transforma payloads planos a instancias de clase (DTOs).
+    - `@nestjs/swagger` — genera la documentación OpenAPI/Swagger (trae `swagger-ui-dist` propio).
+    - `helmet` — cabeceras de seguridad HTTP.
+    - `@types/passport` / `@types/passport-discord` / `@types/passport-jwt` — tipos TypeScript para Passport y ambas strategies.
+  - Nota: no se instala `express-session` — el proyecto es JWT stateless (DEC-004), la Discord strategy se registra con `session: false`.
 
 ---
 

@@ -12,8 +12,5 @@ export const getDatabaseConfig = (
     __dirname + '/../../courses/migrations/*{.ts,.js}',
   ],
   synchronize: false,
-  ssl:
-    configService.get<string>('NODE_ENV') === 'production'
-      ? { rejectUnauthorized: false }
-      : false,
+  ssl: { rejectUnauthorized: false },
 });
