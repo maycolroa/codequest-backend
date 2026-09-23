@@ -37,6 +37,8 @@ Agrega una entrada así después de cada bloque de trabajo:
 
 **[MIGRATION]** `1726000000009-ClassifyCoursesIntoGalaxies`: clasifica los 80 cursos por slug con galaxias, color, posición 3D precalculada y aristas de prerequisitos/relacionados. Idempotente; `down()` devuelve las columnas a sus defaults.
 
+**[CHORE]** Migraciones `1726000000008` y `1726000000009` aplicadas en producción (DigitalOcean) el 2026-09-23, después de validarlas en el Postgres local (run → revert ×2 → run).
+
 ---
 
 ### 2026-09-21 — Catálogo y progreso de cursos
