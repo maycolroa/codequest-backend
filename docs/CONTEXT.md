@@ -61,9 +61,20 @@ description:   string
  url:           string (nullable hasta confirmar la URL oficial)
  durationHours: number (nullable hasta confirmar la duración)
 tags:          string[]
+galaxies:      string[] // claves de COURSE_GALAXIES; la primera es la principal
+galaxyColor:   string | null // color de galaxies[0], desnormalizado
+positionX:     number (default: 0)
+positionY:     number (default: 0)
+positionZ:     number (default: 0)
+prerequisites: string[] // slugs de otros cursos (sin FK)
+related:       string[] // slugs de otros cursos (sin FK)
 isActive:      boolean (default: true)
 createdAt:     Date
 ```
+
+> Las 7 galaxias viven en la constante `src/courses/constants/course-galaxies.constant.ts`, no en base de datos.
+> Un curso creado después de la migración `1726000000009` queda en `(0, 0, 0)` y sin galaxia hasta que el superadmin le asigne valores con `PATCH /courses/:id`.
+> `prerequisites` y `related` no tienen FK: el front debe ignorar aristas hacia slugs que no vengan en la respuesta.
 
 ### `UserAssessment` → tabla `user_assessments`
 ```typescript
@@ -150,6 +161,7 @@ GET  /api/v1/auth/me                → perfil del usuario (JWT)
 ```
 GET  /api/v1/courses                → lista cursos (JWT) | ?category= &level=
 GET  /api/v1/courses/categories     → categorías únicas (JWT)
+GET  /api/v1/courses/galaxy         → mapa 3D { galaxies, courses } con los 80 cursos, activos e inactivos (JWT)
 GET  /api/v1/courses/:id            → detalle de curso (JWT)
 POST /api/v1/courses/:id/enroll     → inscribirme a un curso (JWT)
 GET  /api/v1/courses/my-progress    → mis cursos inscritos (JWT)

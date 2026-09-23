@@ -37,6 +37,27 @@ export class Course {
   @Column('text', { array: true, default: () => "'{}'" })
   tags: string[];
 
+  @Column('text', { array: true, default: () => "'{}'" })
+  galaxies: string[];
+
+  @Column({ name: 'galaxy_color', type: 'varchar', nullable: true })
+  galaxyColor: string | null;
+
+  @Column({ name: 'position_x', type: 'double precision', default: 0 })
+  positionX: number;
+
+  @Column({ name: 'position_y', type: 'double precision', default: 0 })
+  positionY: number;
+
+  @Column({ name: 'position_z', type: 'double precision', default: 0 })
+  positionZ: number;
+
+  @Column('text', { array: true, default: () => "'{}'" })
+  prerequisites: string[];
+
+  @Column('text', { array: true, default: () => "'{}'" })
+  related: string[];
+
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
