@@ -27,6 +27,9 @@ export class Profile {
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 
+  @Column({ name: 'is_super_admin', default: false })
+  isSuperAdmin: boolean;
+
   @Column({ name: 'avatar_url', type: 'varchar', nullable: true })
   avatarUrl: string | null;
 

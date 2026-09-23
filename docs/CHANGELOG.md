@@ -27,6 +27,36 @@ Agrega una entrada así después de cada bloque de trabajo:
 
 ---
 
+### 2026-09-23 — Galaxias 3D de cursos (spec 03)
+
+**[FEAT]** Añadido `GET /api/v1/courses/galaxy` (JWT) para pintar el catálogo como un mapa 3D de galaxias.
+- Responde `{ galaxies, courses }`: las 7 galaxias de `COURSE_GALAXIES` (clave, nombre, color y centro) y los 80 cursos, activos e inactivos, con `isActive` explícito.
+- `CreateCourseDto`/`UpdateCourseDto` aceptan `galaxies`, `galaxyColor`, `positionX/Y/Z`, `prerequisites` y `related`, para que el superadmin los edite con `PATCH /courses/:id`.
+
+**[MIGRATION]** `1726000000008-AddCourseGalaxyFields`: añade a `courses` las columnas `galaxies`, `galaxy_color`, `position_x`, `position_y`, `position_z`, `prerequisites` y `related`. Solo aditiva y con defaults.
+
+**[MIGRATION]** `1726000000009-ClassifyCoursesIntoGalaxies`: clasifica los 80 cursos por slug con galaxias, color, posición 3D precalculada y aristas de prerequisitos/relacionados. Idempotente; `down()` devuelve las columnas a sus defaults.
+
+**[CHORE]** Migraciones `1726000000008` y `1726000000009` aplicadas en producción (DigitalOcean) el 2026-09-23, después de validarlas en el Postgres local (run → revert ×2 → run).
+
+---
+
+### 2026-09-21 — Catálogo y progreso de cursos
+
+**[FEAT]** Organizado el catálogo por categorías y niveles (`beginner`, `intermediate`, `advanced`).
+- Añadidos `slug`, categorías tipadas y validaciones de UUID para los endpoints de cursos.
+- Añadidos endpoints para inscripción y actualización del progreso individual.
+
+**[MIGRATION]** Creadas las migraciones para metadatos de cursos, `user_course_progress` y el seed idempotente del catálogo de DevTalles.
+- `user_course_progress` garantiza una única inscripción por usuario y curso, y valida el porcentaje entre 0 y 100.
+- Se cargan cursos legacy como inactivos para que no sean recomendados por defecto.
+
+**[FEAT]** Añadidas lecciones internas y cálculo automático de avance.
+- El backend recalcula el porcentaje al completar una lección; ya no acepta un porcentaje enviado por el usuario.
+- El CRUD de cursos y lecciones exige `SuperAdminGuard`; las acciones de inscripción y completado permanecen limitadas al perfil autenticado.
+
+---
+
 ### 2026-09-16 — Auth con Discord
 
 **[FEAT]** Creado `AuthModule` con autenticación Discord OAuth2 y JWT.
