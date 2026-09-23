@@ -2,10 +2,12 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 
+import { COURSE_GALAXIES } from './constants/course-galaxies.constant';
 import { Course } from './entities/course.entity';
 import { CourseFiltersDto } from './dto/course-filters.dto';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { CreateCourseLessonDto } from './dto/create-course-lesson.dto';
+import { GalaxyMapResponseDto } from './dto/galaxy-map-response.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { UpdateCourseLessonDto } from './dto/update-course-lesson.dto';
 import { CourseProgressStatus } from './enums/course-progress-status.enum';
@@ -264,6 +266,37 @@ export class CoursesService {
       where: { isActive: true },
       order: { title: 'ASC' },
     });
+  }
+
+  async findGalaxy(): Promise<GalaxyMapResponseDto> {
+    // A diferencia del resto de endpoints, incluye los cursos inactivos (legacy).
+    const courses = await this.coursesRepository.find({
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        category: true,
+        level: true,
+        tags: true,
+        isActive: true,
+        galaxies: true,
+        galaxyColor: true,
+        positionX: true,
+        positionY: true,
+        positionZ: true,
+        prerequisites: true,
+        related: true,
+      },
+      order: { title: 'ASC' },
+    });
+
+    return {
+      galaxies: COURSE_GALAXIES.map((galaxy) => ({
+        ...galaxy,
+        center: { ...galaxy.center },
+      })),
+      courses,
+    };
   }
 
   private createSlug(title: string): string {

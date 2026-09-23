@@ -92,6 +92,15 @@
 - [x] Crear `CoursesController` con Swagger completo
 - [ ] Probar endpoints con Swagger UI
 
+### Galaxias 3D de cursos (spec 03)
+- [x] Crear constante `COURSE_GALAXIES` con las 7 galaxias
+- [x] Crear migration `AddCourseGalaxyFields` (1726000000008)
+- [x] Crear migration `ClassifyCoursesIntoGalaxies` (1726000000009)
+- [x] Crear `GET /courses/galaxy` con DTOs de Swagger
+- [x] Aceptar campos de galaxia en `PATCH /courses/:id`
+- [x] Validar migraciones (run → revert ×2 → run) en Postgres local
+- [ ] Aplicar las migraciones 0008 y 0009 en producción
+
 ### Módulo AI
 - [ ] Crear `AiModule` con `AiService`
 - [ ] Implementar `generateLearningPath()` con Claude API

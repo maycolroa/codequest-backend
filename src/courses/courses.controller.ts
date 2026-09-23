@@ -16,6 +16,7 @@ import {
   ApiBearerAuth,
   ApiOperation,
   ApiParam,
+  ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
 
@@ -24,6 +25,7 @@ import { SuperAdminGuard } from '../auth/guards/super-admin.guard';
 import { CreateCourseDto } from './dto/create-course.dto';
 import { CreateCourseLessonDto } from './dto/create-course-lesson.dto';
 import { CourseFiltersDto } from './dto/course-filters.dto';
+import { GalaxyMapResponseDto } from './dto/galaxy-map-response.dto';
 import { UpdateCourseDto } from './dto/update-course.dto';
 import { UpdateCourseLessonDto } from './dto/update-course-lesson.dto';
 import { CoursesService } from './courses.service';
@@ -54,6 +56,15 @@ export class CoursesController {
   @ApiOperation({ summary: 'Listar categorías de cursos activos' })
   getCategories() {
     return this.coursesService.getCategories();
+  }
+
+  @Get('galaxy')
+  @ApiOperation({
+    summary: 'Mapa 3D de galaxias con todos los cursos (activos e inactivos)',
+  })
+  @ApiResponse({ status: 200, type: GalaxyMapResponseDto })
+  findGalaxy(): Promise<GalaxyMapResponseDto> {
+    return this.coursesService.findGalaxy();
   }
 
   @Get('my-progress')

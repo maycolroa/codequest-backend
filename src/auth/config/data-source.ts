@@ -14,6 +14,8 @@ import { UserCourseProgress } from '../../courses/entities/user-course-progress.
 import { CourseLesson } from '../../courses/entities/course-lesson.entity';
 import { UserLessonProgress } from '../../courses/entities/user-lesson-progress.entity';
 import { CreateCourseLessonsAndAutomaticProgress1726000000007 } from '../../courses/migrations/1726000000007-CreateCourseLessonsAndAutomaticProgress';
+import { AddCourseGalaxyFields1726000000008 } from '../../courses/migrations/1726000000008-AddCourseGalaxyFields';
+import { ClassifyCoursesIntoGalaxies1726000000009 } from '../../courses/migrations/1726000000009-ClassifyCoursesIntoGalaxies';
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -34,6 +36,8 @@ const authDataSource = new DataSource({
     CreateUserCourseProgress1726000000005,
     SeedDevTallesCourses1726000000006,
     CreateCourseLessonsAndAutomaticProgress1726000000007,
+    AddCourseGalaxyFields1726000000008,
+    ClassifyCoursesIntoGalaxies1726000000009,
   ],
   synchronize: false,
   ssl:
