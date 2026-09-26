@@ -8,6 +8,7 @@ import { Course } from './entities/course.entity';
 import { CourseLesson } from './entities/course-lesson.entity';
 import { UserCourseProgress } from './entities/user-course-progress.entity';
 import { UserLessonProgress } from './entities/user-lesson-progress.entity';
+import { Skill } from '../assessments/entities/skill.entity';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { UserLessonProgress } from './entities/user-lesson-progress.entity';
       CourseLesson,
       UserCourseProgress,
       UserLessonProgress,
+      Skill,
     ]),
   ],
   controllers: [CoursesController],

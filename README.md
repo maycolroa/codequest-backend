@@ -102,8 +102,10 @@ codequest-backend/
 │   │   ├── assessments.module.ts
 │   │   ├── assessments.controller.ts
 │   │   ├── assessments.service.ts
+│   │   ├── entities/                   # Skill, Question, QuestionOption, QuizAttempt, QuizAnswer
+│   │   ├── scoring/                    # Cálculo puro y pruebas unitarias
+│   │   ├── migrations/
 │   │   └── dto/
-│   │       └── create-assessment.dto.ts
 │   │
 │   ├── learning-paths/                # Rutas de aprendizaje generadas
 │   │   ├── learning-paths.module.ts
@@ -238,16 +240,14 @@ Orquesta el cuestionario → IA → guardado de ruta.
 ```
 AssessmentsModule
   ├── AssessmentsController (requiere JWT)
-  │     ├── POST /api/v1/assessments   → cuestionario → genera ruta con IA
-  │     └── GET  /api/v1/assessments   → historial del usuario
+  │     ├── POST /api/v1/assessments/skills/:skillId/start
+  │     ├── POST /api/v1/assessments/attempts/:attemptId/answers
+  │     ├── POST /api/v1/assessments/attempts/:attemptId/complete
+  │     └── GET  /api/v1/assessments/my-skills
   │
   └── AssessmentsService
-        └── createAndGeneratePath(userId, dto)
-              1. Crea UserAssessment (TypeORM save)
-              2. Llama AiService.generateLearningPath()
-              3. Crea LearningPath con courses_order JSON
-              4. Crea registros UserProgress (insert bulk)
-              5. Retorna { assessment, learningPath }
+        └── guarda un snapshot inmutable de las preguntas al iniciar,
+            calcula score ponderado y persiste intentos por skill
 ```
 
 **DTO:**
@@ -650,10 +650,18 @@ Documentación interactiva: `/docs` (Swagger UI)
 
 ### Assessments
 
-| Método | Ruta             | Auth | Descripción                              |
-| ------- | ---------------- | ---- | ----------------------------------------- |
-| POST    | `/assessments` | JWT  | Enviar cuestionario → genera ruta con IA |
-| GET     | `/assessments` | JWT  | Historial de cuestionarios                |
+| Método | Ruta | Auth | Descripción |
+| ------- | ---- | ---- | ----------- |
+| POST | `/assessments/skills/:skillId/start` | JWT | Iniciar intento y recibir preguntas sin respuestas correctas |
+| POST | `/assessments/attempts/:attemptId/answers` | JWT | Guardar o actualizar una respuesta |
+| POST | `/assessments/attempts/:attemptId/complete` | JWT | Calcular score y nivel (beginner/intermediate/advanced) |
+| GET | `/assessments/attempts/:attemptId/result` | JWT | Consultar resultado finalizado |
+| GET | `/assessments/my-skills` | JWT | Consultar el nivel vigente de cada skill evaluada |
+| POST | `/assessments/questions` | Superadmin | Crear una pregunta y sus opciones |
+| GET | `/assessments/admin/skills` | Superadmin | Listar skills, incluidas las inactivas |
+| POST/PATCH/DELETE | `/assessments/admin/skills[/:skillId]` | Superadmin | Administrar skills; DELETE las desactiva |
+| GET | `/assessments/admin/skills/:skillId/questions` | Superadmin | Listar preguntas de una skill, con respuesta correcta |
+| GET/PATCH/DELETE | `/assessments/admin/questions/:questionId` | Superadmin | Consultar, editar o desactivar una pregunta |
 
 ### Learning Paths
 

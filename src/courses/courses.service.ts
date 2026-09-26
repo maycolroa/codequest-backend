@@ -14,6 +14,7 @@ import { CourseProgressStatus } from './enums/course-progress-status.enum';
 import { CourseLesson } from './entities/course-lesson.entity';
 import { UserCourseProgress } from './entities/user-course-progress.entity';
 import { UserLessonProgress } from './entities/user-lesson-progress.entity';
+import { Skill } from '../assessments/entities/skill.entity';
 
 export type CourseCatalogSummary = Pick<
   Course,
@@ -29,6 +30,8 @@ export class CoursesService {
     private readonly progressRepository: Repository<UserCourseProgress>,
     @InjectRepository(CourseLesson)
     private readonly lessonsRepository: Repository<CourseLesson>,
+    @InjectRepository(Skill)
+    private readonly skillsRepository: Repository<Skill>,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -46,7 +49,9 @@ export class CoursesService {
     });
 
     try {
-      return await this.coursesRepository.save(course);
+      const savedCourse = await this.coursesRepository.save(course);
+      await this.ensureSkillsExist(savedCourse.tags);
+      return savedCourse;
     } catch (error: unknown) {
       if (this.isUniqueViolation(error)) {
         throw new ConflictException('Ya existe un curso con ese título');
@@ -87,7 +92,9 @@ export class CoursesService {
   async update(id: string, updateCourseDto: UpdateCourseDto): Promise<Course> {
     const course = await this.findById(id);
     Object.assign(course, updateCourseDto);
-    return this.coursesRepository.save(course);
+    const savedCourse = await this.coursesRepository.save(course);
+    await this.ensureSkillsExist(savedCourse.tags);
+    return savedCourse;
   }
 
   async remove(id: string): Promise<void> {
@@ -306,6 +313,21 @@ export class CoursesService {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
+  }
+
+  /** Keeps the assessment catalog aligned with tags from newly loaded courses. */
+  private async ensureSkillsExist(tags: readonly string[]): Promise<void> {
+    const normalizedTags = [...new Set(tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean))];
+    if (normalizedTags.length === 0) return;
+    const existingSkills = await this.skillsRepository.find({
+      where: normalizedTags.map((slug) => ({ slug })),
+      select: { slug: true },
+    });
+    const existingSlugs = new Set(existingSkills.map((skill) => skill.slug));
+    const missingSkills = normalizedTags
+      .filter((slug) => !existingSlugs.has(slug))
+      .map((slug) => this.skillsRepository.create({ name: slug, slug, description: null }));
+    if (missingSkills.length > 0) await this.skillsRepository.save(missingSkills);
   }
 
   private isUniqueViolation(error: unknown): error is { code: string } {

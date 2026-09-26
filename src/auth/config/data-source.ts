@@ -16,6 +16,15 @@ import { UserLessonProgress } from '../../courses/entities/user-lesson-progress.
 import { CreateCourseLessonsAndAutomaticProgress1726000000007 } from '../../courses/migrations/1726000000007-CreateCourseLessonsAndAutomaticProgress';
 import { AddCourseGalaxyFields1726000000008 } from '../../courses/migrations/1726000000008-AddCourseGalaxyFields';
 import { ClassifyCoursesIntoGalaxies1726000000009 } from '../../courses/migrations/1726000000009-ClassifyCoursesIntoGalaxies';
+import { Skill } from '../../assessments/entities/skill.entity';
+import { Question } from '../../assessments/entities/question.entity';
+import { QuestionOption } from '../../assessments/entities/question-option.entity';
+import { QuizAttempt } from '../../assessments/entities/quiz-attempt.entity';
+import { QuizAnswer } from '../../assessments/entities/quiz-answer.entity';
+import { CreateAssessments1726000000008 } from '../../assessments/migrations/1726000000008-CreateAssessments';
+import { QuizAttemptQuestion } from '../../assessments/entities/quiz-attempt-question.entity';
+import { CreateQuizAttemptQuestionSnapshots1726000000009 } from '../../assessments/migrations/1726000000009-CreateQuizAttemptQuestionSnapshots';
+import { SeedInitialAssessmentQuestions1726000000010 } from '../../assessments/migrations/1726000000010-SeedInitialAssessmentQuestions';
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -26,7 +35,7 @@ if (!databaseUrl) {
 const authDataSource = new DataSource({
   type: 'postgres',
   url: databaseUrl,
-  entities: [Profile, Course, CourseLesson, UserCourseProgress, UserLessonProgress],
+  entities: [Profile, Course, CourseLesson, UserCourseProgress, UserLessonProgress, Skill, Question, QuestionOption, QuizAttempt, QuizAttemptQuestion, QuizAnswer],
   migrations: [
     CreateProfiles1726000000000,
     AddLocalAuthentication1726000000001,
@@ -38,6 +47,9 @@ const authDataSource = new DataSource({
     CreateCourseLessonsAndAutomaticProgress1726000000007,
     AddCourseGalaxyFields1726000000008,
     ClassifyCoursesIntoGalaxies1726000000009,
+    CreateAssessments1726000000008,
+    CreateQuizAttemptQuestionSnapshots1726000000009,
+    SeedInitialAssessmentQuestions1726000000010,
   ],
   synchronize: false,
   ssl:

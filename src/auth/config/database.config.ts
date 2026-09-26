@@ -10,6 +10,7 @@ export const getDatabaseConfig = (
   migrations: [
     __dirname + '/../migrations/*{.ts,.js}',
     __dirname + '/../../courses/migrations/*{.ts,.js}',
+    __dirname + '/../../assessments/migrations/*{.ts,.js}',
   ],
   synchronize: false,
   ssl: { rejectUnauthorized: false },
