@@ -10,6 +10,7 @@ import { CreateSkillDto } from './dto/create-skill.dto';
 import { UpdateAssessmentDto } from './dto/update-assessment.dto';
 import { UpdateSkillDto } from './dto/update-skill.dto';
 import { AssessmentsService } from './assessments.service';
+import { assertProfileAccess } from '../auth/utils/assert-profile-access';
 
 @ApiTags('Assessments')
 @ApiBearerAuth()
@@ -17,6 +18,12 @@ import { AssessmentsService } from './assessments.service';
 @Controller('assessments')
 export class AssessmentsController {
   constructor(private readonly assessmentsService: AssessmentsService) {}
+
+  @Get('skills')
+  @ApiOperation({ summary: 'Listar skills activas disponibles para estudiantes' })
+  listSkills() {
+    return this.assessmentsService.findActiveSkills();
+  }
 
   @Post('questions')
   @UseGuards(SuperAdminGuard)
@@ -89,38 +96,43 @@ export class AssessmentsController {
     return this.assessmentsService.removeQuestion(questionId);
   }
 
-  @Post('skills/:skillId/start')
+  @Post('users/:profileId/skills/:skillId/start')
   @ApiParam({ name: 'skillId', format: 'uuid' })
-  @ApiOperation({ summary: 'Iniciar un cuestionario para una skill' })
-  start(@GetUser('id') profileId: string, @Param('skillId', ParseUUIDPipe) skillId: string) {
+  @ApiOperation({ summary: 'Iniciar un cuestionario para una skill del perfil autenticado' })
+  start(@GetUser('id') authenticatedProfileId: string, @Param('profileId', ParseUUIDPipe) profileId: string, @Param('skillId', ParseUUIDPipe) skillId: string) {
+    assertProfileAccess(authenticatedProfileId, profileId);
     return this.assessmentsService.startAttempt(profileId, skillId);
   }
 
-  @Post('attempts/:attemptId/answers')
+  @Post('users/:profileId/attempts/:attemptId/answers')
   @ApiParam({ name: 'attemptId', format: 'uuid' })
-  @ApiOperation({ summary: 'Guardar o reemplazar una respuesta del cuestionario' })
-  answer(@GetUser('id') profileId: string, @Param('attemptId', ParseUUIDPipe) attemptId: string, @Body() dto: AnswerQuestionDto) {
+  @ApiOperation({ summary: 'Guardar una respuesta del cuestionario del perfil autenticado' })
+  answer(@GetUser('id') authenticatedProfileId: string, @Param('profileId', ParseUUIDPipe) profileId: string, @Param('attemptId', ParseUUIDPipe) attemptId: string, @Body() dto: AnswerQuestionDto) {
+    assertProfileAccess(authenticatedProfileId, profileId);
     return this.assessmentsService.saveAnswer(profileId, attemptId, dto);
   }
 
-  @Post('attempts/:attemptId/complete')
+  @Post('users/:profileId/attempts/:attemptId/complete')
   @HttpCode(200)
   @ApiParam({ name: 'attemptId', format: 'uuid' })
   @ApiOperation({ summary: 'Calcular y persistir el resultado del cuestionario' })
-  complete(@GetUser('id') profileId: string, @Param('attemptId', ParseUUIDPipe) attemptId: string) {
+  complete(@GetUser('id') authenticatedProfileId: string, @Param('profileId', ParseUUIDPipe) profileId: string, @Param('attemptId', ParseUUIDPipe) attemptId: string) {
+    assertProfileAccess(authenticatedProfileId, profileId);
     return this.assessmentsService.completeAttempt(profileId, attemptId);
   }
 
-  @Get('attempts/:attemptId/result')
+  @Get('users/:profileId/attempts/:attemptId/result')
   @ApiParam({ name: 'attemptId', format: 'uuid' })
   @ApiOperation({ summary: 'Consultar el resultado de un cuestionario finalizado' })
-  result(@GetUser('id') profileId: string, @Param('attemptId', ParseUUIDPipe) attemptId: string) {
+  result(@GetUser('id') authenticatedProfileId: string, @Param('profileId', ParseUUIDPipe) profileId: string, @Param('attemptId', ParseUUIDPipe) attemptId: string) {
+    assertProfileAccess(authenticatedProfileId, profileId);
     return this.assessmentsService.getResult(profileId, attemptId);
   }
 
-  @Get('my-skills')
+  @Get('users/:profileId/my-skills')
   @ApiOperation({ summary: 'Consultar los niveles vigentes de mis skills' })
-  currentLevels(@GetUser('id') profileId: string) {
+  currentLevels(@GetUser('id') authenticatedProfileId: string, @Param('profileId', ParseUUIDPipe) profileId: string) {
+    assertProfileAccess(authenticatedProfileId, profileId);
     return this.assessmentsService.getCurrentSkillLevels(profileId);
   }
 }

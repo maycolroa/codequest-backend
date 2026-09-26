@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 
 import { COURSE_GALAXIES } from './constants/course-galaxies.constant';
 import { Course } from './entities/course.entity';
@@ -93,6 +93,12 @@ export class CoursesService {
     const course = await this.findById(id);
     Object.assign(course, updateCourseDto);
     const savedCourse = await this.coursesRepository.save(course);
+    if (updateCourseDto.category !== undefined) {
+      await this.progressRepository.update(
+        { courseId: savedCourse.id },
+        { courseCategory: savedCourse.category },
+      );
+    }
     await this.ensureSkillsExist(savedCourse.tags);
     return savedCourse;
   }
@@ -104,7 +110,7 @@ export class CoursesService {
   }
 
   async enroll(profileId: string, courseId: string): Promise<UserCourseProgress> {
-    await this.findById(courseId);
+    const course = await this.findById(courseId);
 
     const existingProgress = await this.progressRepository.findOne({
       where: { profileId, courseId },
@@ -115,7 +121,7 @@ export class CoursesService {
     }
 
     return this.progressRepository.save(
-      this.progressRepository.create({ profileId, courseId }),
+      this.progressRepository.create({ profileId, courseId, courseCategory: course.category }),
     );
   }
 
@@ -205,6 +211,19 @@ export class CoursesService {
   }
 
   completeLesson(profileId: string, lessonId: string): Promise<UserCourseProgress> {
+    return this.setLessonCompletion(profileId, lessonId, true);
+  }
+
+  async findLessonsWithProgress(profileId: string, courseId: string) {
+    const lessons = await this.findLessons(courseId);
+    const progress = lessons.length ? await this.dataSource.getRepository(UserLessonProgress).find({
+      where: { profileId, lessonId: In(lessons.map((lesson) => lesson.id)) },
+    }) : [];
+    const completed = new Set(progress.map((item) => item.lessonId));
+    return lessons.map((lesson) => ({ ...lesson, completed: completed.has(lesson.id) }));
+  }
+
+  setLessonCompletion(profileId: string, lessonId: string, completed: boolean, enrollIfNeeded = false): Promise<UserCourseProgress> {
     return this.dataSource.transaction(async (manager) => {
       const lessonRepository = manager.getRepository(CourseLesson);
       const courseRepository = manager.getRepository(Course);
@@ -225,22 +244,29 @@ export class CoursesService {
         throw new NotFoundException('Curso no encontrado');
       }
 
-      const courseProgress = await progressRepository.findOne({
+      let courseProgress = await progressRepository.findOne({
         where: { profileId, courseId: lesson.courseId },
       });
 
       if (!courseProgress) {
-        throw new ConflictException('Debes inscribirte al curso antes de avanzar');
+        if (!enrollIfNeeded) throw new ConflictException('Debes inscribirte al curso antes de avanzar');
+        courseProgress = await progressRepository.save(progressRepository.create({
+          profileId,
+          courseId: lesson.courseId,
+          courseCategory: course.category,
+        }));
       }
 
       const existingLessonProgress = await lessonProgressRepository.findOne({
         where: { profileId, lessonId },
       });
 
-      if (!existingLessonProgress) {
+      if (completed && !existingLessonProgress) {
         await lessonProgressRepository.save(
           lessonProgressRepository.create({ profileId, lessonId }),
         );
+      } else if (!completed && existingLessonProgress) {
+        await lessonProgressRepository.remove(existingLessonProgress);
       }
 
       await this.recalculateCourseProgress(manager, lesson.courseId, profileId);

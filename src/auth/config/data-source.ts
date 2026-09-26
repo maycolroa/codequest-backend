@@ -25,6 +25,12 @@ import { CreateAssessments1726000000008 } from '../../assessments/migrations/172
 import { QuizAttemptQuestion } from '../../assessments/entities/quiz-attempt-question.entity';
 import { CreateQuizAttemptQuestionSnapshots1726000000009 } from '../../assessments/migrations/1726000000009-CreateQuizAttemptQuestionSnapshots';
 import { SeedInitialAssessmentQuestions1726000000010 } from '../../assessments/migrations/1726000000010-SeedInitialAssessmentQuestions';
+import { LearningPath } from '../../learning-paths/entities/learning-path.entity';
+import { UserAssessment } from '../../learning-paths/entities/user-assessment.entity';
+import { CreateLearningPaths1726000000011 } from '../../learning-paths/migrations/1726000000011-CreateLearningPaths';
+import { UseLessonProgress1726000000012 } from '../../learning-paths/migrations/1726000000012-UseLessonProgress';
+import { SeedCourseLessons1726000000013 } from '../../courses/migrations/1726000000013-SeedCourseLessons';
+import { AddCourseCategoryToProgress1726000000014 } from '../../courses/migrations/1726000000014-AddCourseCategoryToProgress';
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -35,7 +41,7 @@ if (!databaseUrl) {
 const authDataSource = new DataSource({
   type: 'postgres',
   url: databaseUrl,
-  entities: [Profile, Course, CourseLesson, UserCourseProgress, UserLessonProgress, Skill, Question, QuestionOption, QuizAttempt, QuizAttemptQuestion, QuizAnswer],
+  entities: [Profile, Course, CourseLesson, UserCourseProgress, UserLessonProgress, Skill, Question, QuestionOption, QuizAttempt, QuizAttemptQuestion, QuizAnswer, LearningPath, UserAssessment],
   migrations: [
     CreateProfiles1726000000000,
     AddLocalAuthentication1726000000001,
@@ -50,6 +56,10 @@ const authDataSource = new DataSource({
     CreateAssessments1726000000008,
     CreateQuizAttemptQuestionSnapshots1726000000009,
     SeedInitialAssessmentQuestions1726000000010,
+    CreateLearningPaths1726000000011,
+    UseLessonProgress1726000000012,
+    SeedCourseLessons1726000000013,
+    AddCourseCategoryToProgress1726000000014,
   ],
   synchronize: false,
   ssl:

@@ -49,6 +49,10 @@ export class AssessmentsService {
     return this.skillsRepository.find({ order: { name: 'ASC' } });
   }
 
+  findActiveSkills(): Promise<Skill[]> {
+    return this.skillsRepository.find({ where: { isActive: true }, order: { name: 'ASC' } });
+  }
+
   async createSkill(dto: CreateSkillDto): Promise<Skill> {
     try {
       return await this.skillsRepository.save(this.skillsRepository.create({

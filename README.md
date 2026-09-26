@@ -240,10 +240,10 @@ Orquesta el cuestionario → IA → guardado de ruta.
 ```
 AssessmentsModule
   ├── AssessmentsController (requiere JWT)
-  │     ├── POST /api/v1/assessments/skills/:skillId/start
-  │     ├── POST /api/v1/assessments/attempts/:attemptId/answers
-  │     ├── POST /api/v1/assessments/attempts/:attemptId/complete
-  │     └── GET  /api/v1/assessments/my-skills
+  │     ├── POST /api/v1/assessments/users/:profileId/skills/:skillId/start
+  │     ├── POST /api/v1/assessments/users/:profileId/attempts/:attemptId/answers
+  │     ├── POST /api/v1/assessments/users/:profileId/attempts/:attemptId/complete
+  │     └── GET  /api/v1/assessments/users/:profileId/my-skills
   │
   └── AssessmentsService
         └── guarda un snapshot inmutable de las preguntas al iniciar,
@@ -280,10 +280,10 @@ CRUD de rutas + sistema de progreso por curso.
 ```
 LearningPathsModule
   ├── LearningPathsController (requiere JWT)
-  │     ├── GET    /api/v1/learning-paths                           → mis rutas + % progreso
-  │     ├── GET    /api/v1/learning-paths/:id                       → detalle con cursos
-  │     ├── PATCH  /api/v1/learning-paths/:pathId/progress/:courseId → toggle completado
-  │     └── DELETE /api/v1/learning-paths/:id                       → eliminar ruta
+  │     ├── GET    /api/v1/learning-paths/users/:profileId → rutas del usuario autenticado
+  │     ├── GET    /api/v1/learning-paths/users/:profileId/:id → detalle con cursos/lecciones
+  │     ├── PATCH  /api/v1/learning-paths/users/:profileId/:pathId/courses/:courseId/lessons/:lessonId/progress
+  │     └── DELETE /api/v1/learning-paths/users/:profileId/:id → eliminar ruta
   │
   └── LearningPathsService
         ├── findAllByUser(userId)    → find con relaciones + calcular % progreso
@@ -652,11 +652,11 @@ Documentación interactiva: `/docs` (Swagger UI)
 
 | Método | Ruta | Auth | Descripción |
 | ------- | ---- | ---- | ----------- |
-| POST | `/assessments/skills/:skillId/start` | JWT | Iniciar intento y recibir preguntas sin respuestas correctas |
-| POST | `/assessments/attempts/:attemptId/answers` | JWT | Guardar o actualizar una respuesta |
-| POST | `/assessments/attempts/:attemptId/complete` | JWT | Calcular score y nivel (beginner/intermediate/advanced) |
-| GET | `/assessments/attempts/:attemptId/result` | JWT | Consultar resultado finalizado |
-| GET | `/assessments/my-skills` | JWT | Consultar el nivel vigente de cada skill evaluada |
+| POST | `/assessments/users/:profileId/skills/:skillId/start` | JWT + ID validado | Iniciar intento y recibir preguntas sin respuestas correctas |
+| POST | `/assessments/users/:profileId/attempts/:attemptId/answers` | JWT + ID validado | Guardar o actualizar una respuesta |
+| POST | `/assessments/users/:profileId/attempts/:attemptId/complete` | JWT + ID validado | Calcular score y nivel |
+| GET | `/assessments/users/:profileId/attempts/:attemptId/result` | JWT + ID validado | Consultar resultado finalizado |
+| GET | `/assessments/users/:profileId/my-skills` | JWT + ID validado | Consultar el nivel vigente de cada skill evaluada |
 | POST | `/assessments/questions` | Superadmin | Crear una pregunta y sus opciones |
 | GET | `/assessments/admin/skills` | Superadmin | Listar skills, incluidas las inactivas |
 | POST/PATCH/DELETE | `/assessments/admin/skills[/:skillId]` | Superadmin | Administrar skills; DELETE las desactiva |
@@ -667,10 +667,10 @@ Documentación interactiva: `/docs` (Swagger UI)
 
 | Método | Ruta                                           | Auth | Descripción                      |
 | ------- | ---------------------------------------------- | ---- | --------------------------------- |
-| GET     | `/learning-paths`                            | JWT  | Mis rutas con % de progreso       |
-| GET     | `/learning-paths/:id`                        | JWT  | Detalle con cursos y progreso     |
-| PATCH   | `/learning-paths/:pathId/progress/:courseId` | JWT  | Marcar/desmarcar curso completado |
-| DELETE  | `/learning-paths/:id`                        | JWT  | Eliminar una ruta                 |
+| GET     | `/learning-paths/users/:profileId` | JWT + ID validado | Rutas del estudiante |
+| GET     | `/learning-paths/users/:profileId/:id` | JWT + ID validado | Detalle con cursos, lecciones y progreso |
+| PATCH   | `/learning-paths/users/:profileId/:pathId/courses/:courseId/lessons/:lessonId/progress` | JWT + ID validado | Marcar/desmarcar una lección |
+| DELETE  | `/learning-paths/users/:profileId/:id` | JWT + ID validado | Eliminar una ruta |
 
 ---
 

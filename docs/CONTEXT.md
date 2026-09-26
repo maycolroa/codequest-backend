@@ -108,6 +108,7 @@ createdAt:      Date
 id:             uuid (PK)
 profile:        Profile (FK)
 course:         Course (FK)
+courseCategory: category del curso inscrito (sincronizada con Course.category)
 status:         'not_started'|'in_progress'|'completed'
 progressPercent:number (0-100)
 startedAt:      Date (nullable)
@@ -163,27 +164,29 @@ GET  /api/v1/courses                → lista cursos (JWT) | ?category= &level=
 GET  /api/v1/courses/categories     → categorías únicas (JWT)
 GET  /api/v1/courses/galaxy         → mapa 3D { galaxies, courses } con los 80 cursos, activos e inactivos (JWT)
 GET  /api/v1/courses/:id            → detalle de curso (JWT)
-POST /api/v1/courses/:id/enroll     → inscribirme a un curso (JWT)
-GET  /api/v1/courses/my-progress    → mis cursos inscritos (JWT)
+POST /api/v1/courses/users/:profileId/courses/:id/enroll → inscribirme a un curso (JWT; valida el ID del perfil)
+GET  /api/v1/courses/users/:profileId/progress → cursos inscritos y avance (JWT; valida el ID del perfil)
 GET  /api/v1/courses/:id/lessons    → lecciones de un curso (JWT)
 POST /api/v1/courses/:id/lessons    → crear lección (superadmin)
 PATCH /api/v1/courses/lessons/:lessonId → editar lección (superadmin)
 DELETE /api/v1/courses/lessons/:lessonId → eliminar lección y recalcular avances (superadmin)
-POST /api/v1/courses/lessons/:lessonId/complete → completar lección y recalcular avance (JWT)
+POST /api/v1/courses/users/:profileId/lessons/:lessonId/complete → completar lección y recalcular avance (JWT; valida el ID del perfil)
 ```
 
 ### Assessments
 ```
+GET  /api/v1/assessments/skills      → skills activas disponibles (JWT)
 POST /api/v1/assessments            → cuestionario → genera ruta con IA (JWT)
 GET  /api/v1/assessments            → historial de cuestionarios (JWT)
 ```
 
 ### Learning Paths
 ```
-GET    /api/v1/learning-paths                               → mis rutas (JWT)
-GET    /api/v1/learning-paths/:id                           → detalle (JWT)
-PATCH  /api/v1/learning-paths/:pathId/progress/:courseId    → toggle completado (JWT)
-DELETE /api/v1/learning-paths/:id                           → eliminar (JWT)
+POST   /api/v1/learning-paths/users/:profileId/generate → guardar intereses y generar rutas (JWT; valida el ID del perfil)
+GET    /api/v1/learning-paths/users/:profileId → listar rutas (JWT; valida el ID del perfil)
+GET    /api/v1/learning-paths/users/:profileId/:id → detalle con cursos y lecciones (JWT; valida el ID del perfil)
+PATCH  /api/v1/learning-paths/users/:profileId/:pathId/courses/:courseId/lessons/:lessonId/progress → marcar/desmarcar lección con { completed: boolean } (JWT; valida el ID del perfil)
+DELETE /api/v1/learning-paths/users/:profileId/:id → eliminar ruta (JWT; valida el ID del perfil)
 ```
 
 ---
