@@ -53,6 +53,59 @@ export class AssessmentsService {
     return this.skillsRepository.find({ where: { isActive: true }, order: { name: 'ASC' } });
   }
 
+  /** Student-facing catalog. Filters and available facet values come from active DB records. */
+  async findStudentCatalog(filters: { search?: string; difficulty?: number; type?: string }) {
+    const normalizedSearch = filters.search?.trim();
+    const matching = this.skillsRepository.createQueryBuilder('skill')
+      .innerJoin('questions', 'question', 'question.skill_id = skill.id AND question.is_active = true')
+      .where('skill.is_active = true');
+    if (normalizedSearch) {
+      matching.andWhere('(skill.name ILIKE :search OR skill.slug ILIKE :search OR skill.description ILIKE :search)', {
+        search: `%${normalizedSearch}%`,
+      });
+    }
+    if (filters.difficulty !== undefined) matching.andWhere('question.difficulty = :difficulty', { difficulty: filters.difficulty });
+    if (filters.type) matching.andWhere('question.type = :type', { type: filters.type });
+    const skills = await matching
+      .select('skill.id', 'id').addSelect('skill.name', 'name').addSelect('skill.slug', 'slug')
+      .addSelect('skill.description', 'description').addSelect('COUNT(DISTINCT question.id)', 'questionCount')
+      .groupBy('skill.id').orderBy('skill.name', 'ASC').getRawMany<{
+        id: string; name: string; slug: string; description: string | null; questionCount: string;
+      }>();
+
+    const facetRows = await this.questionsRepository.createQueryBuilder('question')
+      .innerJoin('skills', 'skill', 'skill.id = question.skill_id AND skill.is_active = true')
+      .where('question.is_active = true')
+      .select('question.difficulty', 'difficulty').addSelect('question.type', 'type')
+      .distinct(true).getRawMany<{ difficulty: number; type: string }>();
+
+    return {
+      items: skills.map((skill) => ({ ...skill, questionCount: Number(skill.questionCount) })),
+      filters: {
+        difficulties: [...new Set(facetRows.map((row) => Number(row.difficulty)))].sort((a, b) => a - b)
+          .map((value) => ({ value, label: ({ 1: 'Básica', 2: 'Intermedia', 3: 'Avanzada' } as Record<number, string>)[value] ?? String(value) })),
+        types: [...new Set(facetRows.map((row) => row.type))].sort(),
+      },
+    };
+  }
+
+  async findStudentCatalogSkill(skillId: string) {
+    const skill = await this.skillsRepository.findOne({ where: { id: skillId, isActive: true } });
+    if (!skill) throw new NotFoundException('Skill no encontrada');
+    const facets = await this.questionsRepository.createQueryBuilder('question')
+      .where('question.skill_id = :skillId AND question.is_active = true', { skillId })
+      .select('question.difficulty', 'difficulty').addSelect('question.type', 'type')
+      .distinct(true).getRawMany<{ difficulty: number; type: string }>();
+    return {
+      id: skill.id, name: skill.name, slug: skill.slug, description: skill.description,
+      questionCount: facets.length === 0 ? 0 : await this.questionsRepository.count({ where: { skillId, isActive: true } }),
+      filters: {
+        difficulties: [...new Set(facets.map((row) => Number(row.difficulty)))].sort((a, b) => a - b),
+        types: [...new Set(facets.map((row) => row.type))].sort(),
+      },
+    };
+  }
+
   async createSkill(dto: CreateSkillDto): Promise<Skill> {
     try {
       return await this.skillsRepository.save(this.skillsRepository.create({

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, ParseUUIDPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 
 import { GetUser } from '../auth/decorators/get-user.decorator';
@@ -23,6 +23,25 @@ export class AssessmentsController {
   @ApiOperation({ summary: 'Listar skills activas disponibles para estudiantes' })
   listSkills() {
     return this.assessmentsService.findActiveSkills();
+  }
+
+  @Get('catalog')
+  @ApiOperation({ summary: 'Consultar y filtrar el catálogo activo de cuestionarios' })
+  catalog(
+    @Query('search') search?: string,
+    @Query('difficulty', new ParseIntPipe({ optional: true })) difficulty?: number,
+    @Query('type') type?: string,
+  ) {
+    return this.assessmentsService.findStudentCatalog({ search, difficulty, type });
+  }
+
+  @Get('catalog/:skillId')
+  @ApiParam({ name: 'skillId', format: 'uuid' })
+  @ApiOperation({ summary: 'Consultar el resumen de una skill del catálogo, sin contenido del cuestionario' })
+  catalogSkill(
+    @Param('skillId', ParseUUIDPipe) skillId: string,
+  ) {
+    return this.assessmentsService.findStudentCatalogSkill(skillId);
   }
 
   @Post('questions')
