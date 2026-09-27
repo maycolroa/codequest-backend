@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Code Quest 2026 — Backend",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "discord-oauth", "label": "Discord OAuth2", "focus": ["frontend", "auth", "discord", "profile"], "note": "Frontend → /auth/discord → Discord → /auth/discord/callback → redirect al frontend con ?token=JWT." },
+      { "id": "galaxy", "label": "Galaxia de cursos", "focus": ["frontend", "courses", "course", "typeorm", "postgres"], "note": "GET /api/v1/courses/galaxy con JWT: cursos agrupados por galaxies, prerequisites y related." },
+      { "id": "delivery", "label": "CI/CD", "focus": ["gha", "registry", "app"], "note": "Push a main → GitHub Actions construye la imagen Docker y la publica en DigitalOcean Container Registry." }
+    ]
+  },
+  "components": [
+    { "id": "frontend", "type": "frontend", "label": "Frontend", "sublabel": "FRONTEND_URL · CORS", "pos": [40, 300], "size": [150, 64] },
+    { "id": "discord", "type": "external", "label": "Discord", "sublabel": "OAuth2 provider", "brand": "discord", "pos": [280, 60], "size": [160, 64] },
+    { "id": "auth", "type": "security", "label": "AuthModule", "sublabel": "/auth · Discord + local", "tag": "Passport · JWT", "pos": [280, 200], "size": [160, 64] },
+    { "id": "courses", "type": "backend", "label": "CoursesModule", "sublabel": "GET /courses/galaxy", "tag": "JwtAuthGuard", "pos": [280, 400], "size": [160, 64] },
+    { "id": "profile", "type": "backend", "label": "Profile", "sublabel": "entity · profiles", "pos": [530, 200], "size": [150, 64] },
+    { "id": "course", "type": "backend", "label": "Course", "sublabel": "galaxies · prerequisites · related", "pos": [530, 400], "size": [190, 64] },
+    { "id": "typeorm", "type": "backend", "label": "TypeORM", "sublabel": "migrations 0000 → 0015", "tag": "synchronize: false", "pos": [790, 300], "size": [170, 64] },
+    { "id": "postgres", "type": "database", "label": "PostgreSQL", "sublabel": "DigitalOcean Managed DB", "brand": "postgresql", "pos": [1050, 300], "size": [180, 64] },
+    { "id": "gha", "type": "cloud", "label": "GitHub Actions", "sublabel": "push a main", "brand": "github-actions", "pos": [530, 550], "size": [170, 64] },
+    { "id": "registry", "type": "cloud", "label": "DO Container Registry", "sublabel": "codequest/backend", "brand": "digitalocean", "pos": [790, 550], "size": [190, 64] },
+    { "id": "app", "type": "cloud", "label": "App Platform", "sublabel": "contenedor NestJS", "brand": "digitalocean", "pos": [1050, 550], "size": [180, 64] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "NestJS API · /api/v1", "wraps": ["auth", "courses", "profile", "course", "typeorm"] },
+    { "kind": "region", "label": "DigitalOcean", "wraps": ["postgres", "app"] }
+  ],
+  "connections": [
+    { "id": "fe-auth", "from": "frontend", "to": "auth", "label": "login · register", "variant": "emphasis" },
+    { "id": "auth-discord", "from": "auth", "to": "discord", "label": "OAuth2 + callback", "variant": "security", "labelDx": 90 },
+    { "id": "fe-courses", "from": "frontend", "to": "courses", "label": "Bearer JWT" },
+    { "id": "auth-profile", "from": "auth", "to": "profile", "label": "upsert" },
+    { "id": "courses-course", "from": "courses", "to": "course", "label": "query" },
+    { "id": "profile-orm", "from": "profile", "to": "typeorm" },
+    { "id": "course-orm", "from": "course", "to": "typeorm" },
+    { "id": "orm-pg", "from": "typeorm", "to": "postgres", "label": "SQL · SSL", "variant": "emphasis" },
+    { "id": "gha-registry", "from": "gha", "to": "registry", "label": "docker push" },
+    { "id": "registry-app", "from": "registry", "to": "app", "label": ":latest", "variant": "dashed" }
+  ],
+  "cards": [
+    { "dot": "rose", "title": "Autenticación", "items": ["Discord: /auth/discord → Discord → /auth/discord/callback → redirect ?token=JWT", "Local: POST /auth/register | /auth/login → JWT"] },
+    { "dot": "emerald", "title": "Datos", "items": ["Course: galaxies[], galaxyColor, prerequisites[], related[]", "Migraciones TypeORM 0000 → 0015 (galaxias: 0008–0009)", "PostgreSQL gestionado vía DATABASE_URL con SSL"] },
+    { "dot": "cyan", "title": "Entrega", "items": ["GitHub Actions construye la imagen con el Dockerfile", "Tags :latest y :<sha> en registry.digitalocean.com", "App Platform ejecuta la imagen :latest"] }
+  ]
+}
