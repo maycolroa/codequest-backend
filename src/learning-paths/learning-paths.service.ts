@@ -1,7 +1,5 @@
-import { BadGatewayException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import Anthropic from '@anthropic-ai/sdk';
 import { DataSource, Repository } from 'typeorm';
 import { CoursesService } from '../courses/courses.service';
 import { GenerateLearningPathsDto } from './dto/generate-learning-paths.dto';
@@ -9,61 +7,48 @@ import { LearningPath } from './entities/learning-path.entity';
 import { UserAssessment } from './entities/user-assessment.entity';
 import { UpdateCourseProgressDto } from './dto/update-course-progress.dto';
 
-interface GeneratedPath { title: string; description: string; estimatedWeeks: number; totalHours: number; courses: { courseId: string; order: number; reason: string }[]; tips: string[]; }
 
 @Injectable()
 export class LearningPathsService {
-  private readonly anthropic: Anthropic | null;
   constructor(
-    config: ConfigService,
     private readonly coursesService: CoursesService,
     private readonly dataSource: DataSource,
     @InjectRepository(LearningPath) private readonly paths: Repository<LearningPath>,
-  ) {
-    const key = config.get<string>('ANTHROPIC_API_KEY');
-    this.anthropic = key ? new Anthropic({ apiKey: key }) : null;
-  }
+  ) {}
 
   async generate(profileId: string, dto: GenerateLearningPathsDto) {
-    if (!this.anthropic) throw new ServiceUnavailableException('La generación de rutas no está configurada');
     const catalog = await this.coursesService.getCatalogSummary();
     if (!catalog.length) throw new ServiceUnavailableException('No hay cursos activos para generar rutas');
-    const prompt = `Genera exactamente una ruta por cada interés, en el mismo orden. Responde únicamente JSON válido con la forma {"paths":[{"title":string,"description":string,"estimatedWeeks":integer,"totalHours":integer,"courses":[{"courseId":uuid,"order":integer,"reason":string}],"tips":[string]}]}. Selecciona solo cursos del catálogo y usa sus UUID exactos. Ordena desde fundamentos a avanzado y personaliza según objetivo, nivel, horas semanales y tecnologías. Cada ruta debe ser pertinente a su interés, con cursos distintos cuando sea posible. No inventes cursos.\nPerfil: ${JSON.stringify(dto)}\nCatálogo: ${JSON.stringify(catalog.map(({ id, title, description, category, level, durationHours, tags }) => ({ id, title, description, category, level, durationHours, tags })))}`;
-    let generated: GeneratedPath[];
-    try {
-      const response = await this.anthropic.messages.create({
-        model: 'claude-sonnet-4-6', max_tokens: 4000,
-        messages: [{ role: 'user', content: prompt }],
-      });
-      const raw = response.content.find((item) => item.type === 'text')?.text;
-      const parsed = JSON.parse(raw ?? '{}') as { paths?: GeneratedPath[] };
-      generated = parsed.paths ?? [];
-    } catch {
-      throw new BadGatewayException('No se pudieron generar las rutas con el servicio de IA');
-    }
-    if (generated.length !== dto.interests.length) throw new BadGatewayException('La IA devolvió una cantidad incorrecta de rutas');
-    const activeIds = new Set(catalog.map((course) => course.id));
-    for (const path of generated) {
-      if (!path.title || !path.description || !Number.isInteger(path.estimatedWeeks) || !Number.isInteger(path.totalHours) ||
-        !Array.isArray(path.courses) || path.courses.length === 0 || !Array.isArray(path.tips) ||
-        path.courses.some((course) => !activeIds.has(course.courseId) || !Number.isInteger(course.order) || !course.reason)) {
-        throw new BadGatewayException('La IA devolvió una ruta con datos inválidos');
-      }
-      path.courses.sort((a, b) => a.order - b.order);
-    }
+    const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const aliases: Record<string, string[]> = {
+      frontend: ['frontend', 'front-end', 'ui', 'web'], backend: ['backend', 'back-end', 'api', 'servidor'],
+      mobile: ['mobile', 'movil', 'flutter', 'react native'], devops: ['devops', 'cloud', 'infraestructura', 'docker'],
+      'bases de datos': ['database', 'databases', 'base de datos', 'sql', 'postgres'], testing: ['testing', 'test', 'qa'],
+      'ia aplicada': ['ia', 'ai', 'machine learning', 'inteligencia artificial'], arquitectura: ['arquitectura', 'architecture'],
+      seguridad: ['seguridad', 'security'],
+    };
+    const level = normalize(dto.currentLevel);
+    const levelWeight = (courseLevel: string) => normalize(courseLevel) === level ? 3 : 0;
+    const selected = new Set<string>();
+    const generated = dto.interests.map((interest) => {
+      const normalizedInterest = normalize(interest);
+      const terms = aliases[normalizedInterest] ?? [normalizedInterest];
+      const ranked = catalog.map((course) => {
+        const searchable = [course.title, course.description, course.category, ...course.tags].map(normalize).join(' ');
+        const matches = terms.reduce((score, term) => score + (searchable.includes(normalize(term)) ? 1 : 0), 0);
+        return { course, score: matches * 10 + levelWeight(course.level) - (selected.has(course.id) ? 2 : 0) };
+      }).filter(({ score }) => score > 0).sort((a, b) => b.score - a.score || a.course.title.localeCompare(b.course.title));
+      const candidates = (ranked.length ? ranked : catalog.map((course) => ({ course, score: 0 }))).slice(0, 8);
+      candidates.forEach(({ course }) => selected.add(course.id));
+      const courses = candidates.map(({ course }, index) => ({ courseId: course.id, order: index + 1, reason: `Coincide con ${interest} y el nivel ${dto.currentLevel}` }));
+      const totalHours = candidates.reduce((sum, { course }) => sum + Number(course.durationHours ?? 0), 0);
+      return { title: `Ruta de ${interest}`, description: `Cursos seleccionados del catálogo para desarrollar conocimientos en ${interest}.`, estimatedWeeks: Math.max(1, Math.ceil(totalHours / dto.availableHoursPerWeek)), totalHours, courses, tips: ['Sigue los cursos en el orden recomendado.', 'Completa las lecciones y revisa tus prerequisitos.'] };
+    });
     return this.dataSource.transaction(async (manager) => {
       const assessmentRepo = manager.getRepository(UserAssessment);
-      const assessment = await assessmentRepo.save(assessmentRepo.create({
-        profileId, interests: dto.interests.map((interest) => interest.trim()), goals: dto.goals.trim(),
-        currentLevel: dto.currentLevel, availableHoursPerWeek: dto.availableHoursPerWeek,
-        preferredTechnologies: dto.preferredTechnologies ?? [],
-      }));
+      const assessment = await assessmentRepo.save(assessmentRepo.create({ profileId, interests: dto.interests.map((interest) => interest.trim()), goals: dto.goals.trim(), currentLevel: dto.currentLevel, availableHoursPerWeek: dto.availableHoursPerWeek, preferredTechnologies: dto.preferredTechnologies ?? [] }));
       const pathRepo = manager.getRepository(LearningPath);
-      const savedPaths = await pathRepo.save(generated.map((path) => pathRepo.create({
-        profileId, assessmentId: assessment.id, title: path.title, description: path.description,
-        estimatedWeeks: path.estimatedWeeks, totalHours: path.totalHours,
-        coursesOrder: path.courses, tips: path.tips,
-      })));
+      const savedPaths = await pathRepo.save(generated.map((path) => pathRepo.create({ profileId, assessmentId: assessment.id, title: path.title, description: path.description, estimatedWeeks: path.estimatedWeeks, totalHours: path.totalHours, coursesOrder: path.courses, tips: path.tips })));
       return { assessment, learningPaths: savedPaths };
     });
   }
