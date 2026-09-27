@@ -112,10 +112,6 @@ codequest-backend/
 │   │   ├── learning-paths.controller.ts
 │   │   └── learning-paths.service.ts
 │   │
-│   ├── ai/                            # Integración Claude API
-│   │   ├── ai.module.ts
-│   │   └── ai.service.ts
-│   │
 │   └── common/                        # Utilidades compartidas
 │       ├── guards/
 │       │   └── jwt-auth.guard.ts
@@ -159,7 +155,6 @@ Configura TypeORM de forma global con la conexión a PostgreSQL.
     CoursesModule,
     AssessmentsModule,
     LearningPathsModule,
-    AiModule,
   ],
 })
 export class AppModule {}
@@ -275,58 +270,23 @@ class CreateAssessmentDto {
 
 ### `LearningPathsModule`
 
-CRUD de rutas + sistema de progreso por curso.
+Generación de rutas + CRUD + sistema de progreso por curso. No existe un `AiModule` independiente: la generación de rutas vive dentro de este módulo y usa `CoursesService.getCatalogSummary()` para obtener el catálogo.
 
 ```
 LearningPathsModule
   ├── LearningPathsController (requiere JWT)
+  │     ├── POST   /api/v1/learning-paths/users/:profileId/generate → generar y guardar rutas
   │     ├── GET    /api/v1/learning-paths/users/:profileId → rutas del usuario autenticado
   │     ├── GET    /api/v1/learning-paths/users/:profileId/:id → detalle con cursos/lecciones
   │     ├── PATCH  /api/v1/learning-paths/users/:profileId/:pathId/courses/:courseId/lessons/:lessonId/progress
   │     └── DELETE /api/v1/learning-paths/users/:profileId/:id → eliminar ruta
   │
   └── LearningPathsService
+        ├── generate(profileId, dto)  → rankea el catálogo por intereses y nivel, guarda la ruta
         ├── findAllByUser(userId)    → find con relaciones + calcular % progreso
         ├── findOne(id, userId)      → find con JOIN a courses y progress
         ├── toggleCourseProgress()   → update completed + completedAt
         └── remove(id, userId)       → delete en cascada
-```
-
----
-
-### `AiModule`
-
-Integración con Anthropic Claude API.
-
-```
-AiModule
-  └── AiService
-        └── generateLearningPath(assessment)
-              1. Obtiene catálogo: CoursesService.getCatalogSummary()
-              2. Construye system prompt (reglas + formato JSON estricto)
-              3. Construye user message (perfil + catálogo completo)
-              4. POST a claude-sonnet-4-6 (max_tokens: 2000)
-              5. Parsea respuesta JSON
-              6. Retorna GeneratedPath tipado
-```
-
-**Respuesta esperada de Claude:**
-
-```json
-{
-  "title": "Tu ruta hacia Fullstack JavaScript",
-  "description": "Descripción de 2-3 oraciones del recorrido",
-  "estimatedWeeks": 24,
-  "totalHours": 148,
-  "courses": [
-    {
-      "courseId": "uuid-exacto-del-catalogo",
-      "order": 1,
-      "reason": "Por qué este curso en este momento"
-    }
-  ],
-  "tips": ["Consejo 1", "Consejo 2", "Consejo 3"]
-}
 ```
 
 ---
@@ -582,6 +542,31 @@ npm run migration:revert
 npm run migration:show
 ```
 
+### Migraciones del proyecto
+
+El proyecto tiene **16 migraciones numeradas del 0000 al 0015**, repartidas por módulo. Las de galaxias (0008 y 0009) ya están **aplicadas en producción**.
+
+| #    | Archivo                                                   | Módulo           |
+| ---- | --------------------------------------------------------- | ---------------- |
+| 0000 | `1726000000000-CreateProfiles`                            | auth             |
+| 0001 | `1726000000001-AddLocalAuthentication`                    | auth             |
+| 0002 | `1726000000002-CreateCourses`                             | courses          |
+| 0003 | `1726000000003-AddSuperAdminRole`                         | auth             |
+| 0004 | `1726000000004-AddCourseCatalogMetadata`                  | courses          |
+| 0005 | `1726000000005-CreateUserCourseProgress`                  | courses          |
+| 0006 | `1726000000006-SeedDevTallesCourses`                      | courses          |
+| 0007 | `1726000000007-CreateCourseLessonsAndAutomaticProgress`   | courses          |
+| 0008 | `1726000000008-AddCourseGalaxyFields`                     | courses          |
+| 0009 | `1726000000009-ClassifyCoursesIntoGalaxies`               | courses          |
+| 0010 | `1726000000010-SeedInitialAssessmentQuestions`            | assessments      |
+| 0011 | `1726000000011-CreateLearningPaths`                       | learning-paths   |
+| 0012 | `1726000000012-UseLessonProgress`                         | learning-paths   |
+| 0013 | `1726000000013-SeedCourseLessons`                         | courses          |
+| 0014 | `1726000000014-AddCourseCategoryToProgress`               | courses          |
+| 0015 | `1726000000015-AddLessonDurations`                        | courses          |
+
+> ⚠️ Además, `src/assessments/migrations/` contiene `1726000000008-CreateAssessments` y `1726000000009-CreateQuizAttemptQuestionSnapshots`, que **comparten número** con 0008 y 0009. En total hay 18 archivos. Verifica el estado real con `npm run migration:show`.
+
 ### Scripts en package.json
 
 ```json
@@ -646,6 +631,7 @@ Documentación interactiva: `/docs` (Swagger UI)
 | ------- | ----------------------- | ---- | -------------------------------------------------------- |
 | GET     | `/courses`            | JWT  | Listar cursos (`?category=backend&level=intermediate`) |
 | GET     | `/courses/categories` | JWT  | Categorías disponibles                                  |
+| GET     | `/courses/galaxy`     | JWT  | Cursos con posición 3D agrupados en 7 galaxias (`galaxies`, `galaxyColor`, `position_x/y/z`) |
 | GET     | `/courses/:id`        | JWT  | Detalle de un curso                                      |
 
 ### Assessments
@@ -680,7 +666,7 @@ Documentación interactiva: `/docs` (Swagger UI)
 # ── App ──────────────────────────────────────────────
 PORT=3000
 NODE_ENV=production
-FRONTEND_URL=https://tu-frontend.ondigitalocean.app
+FRONTEND_URL=https://codequest-frontend-m26va.ondigitalocean.app
 
 # ── Base de datos (DigitalOcean PostgreSQL) ──────────
 # Obtener en: DigitalOcean → Databases → tu cluster → Connection String
@@ -695,7 +681,7 @@ JWT_EXPIRES_IN=7d
 # Crear en: https://discord.com/developers/applications
 DISCORD_CLIENT_ID=1234567890123456789
 DISCORD_CLIENT_SECRET=AbCdEfGhIjKlMnOpQrSt
-DISCORD_CALLBACK_URL=https://tu-backend.ondigitalocean.app/api/v1/auth/discord/callback
+DISCORD_CALLBACK_URL=https://codequest-backend-7ogey.ondigitalocean.app/api/v1/auth/discord/callback
 DEVTALLES_GUILD_ID=1130900724499365958
 
 # ── Anthropic Claude API ─────────────────────────────
@@ -975,15 +961,28 @@ Agregar variables de entorno en App Platform:
 DATABASE_URL          → connection string de tu PostgreSQL DO
 PORT                  → 3000
 NODE_ENV              → production
-FRONTEND_URL          → URL del frontend desplegado
+FRONTEND_URL          → https://codequest-frontend-m26va.ondigitalocean.app
 JWT_SECRET            → cadena aleatoria segura
 JWT_EXPIRES_IN        → 7d
 DISCORD_CLIENT_ID     → de Discord Developer Portal
 DISCORD_CLIENT_SECRET → de Discord Developer Portal
-DISCORD_CALLBACK_URL  → https://tu-backend.ondigitalocean.app/api/v1/auth/discord/callback
+DISCORD_CALLBACK_URL  → https://codequest-backend-7ogey.ondigitalocean.app/api/v1/auth/discord/callback
 DEVTALLES_GUILD_ID    → 1130900724499365958
 ANTHROPIC_API_KEY     → de console.anthropic.com
 ```
+
+### CI/CD — GitHub Actions + Autodeploy
+
+El workflow `.github/workflows/deploy.yml` se dispara con cada push a `main` y **termina en `docker push`** al Container Registry de DigitalOcean:
+
+```
+push a main
+  → GitHub Actions (checkout · doctl · doctl registry login)
+  → docker build  (tags :latest y :<sha>)
+  → docker push   → registry.digitalocean.com/codequest/backend
+```
+
+**No hay un paso explícito de deploy en el YAML.** El redeploy en App Platform ocurre automáticamente porque **Autodeploy** está activado en la app: cada nueva imagen `:latest` en el registry dispara un despliegue.
 
 ### Paso 3 — Actualizar Discord OAuth2
 
@@ -1005,6 +1004,7 @@ discord.com/developers/applications
 [ ] Login con Discord funciona end-to-end
 [ ] Cuestionario genera ruta con IA
 [ ] Progreso de cursos se guarda correctamente
+[ ] Token de GitHub revocado del remote URL (git remote set-url origin https://github.com/maycolroa/codequest-backend)
 [ ] No hay commits después del 28 sep 10:00AM GMT-6
 ```
 
