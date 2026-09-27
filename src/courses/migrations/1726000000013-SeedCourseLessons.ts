@@ -21,8 +21,8 @@ export class SeedCourseLessons1726000000013 implements MigrationInterface {
       if (existing.length > 0) continue;
 
       await queryRunner.query(
-        `INSERT INTO "course_lessons" ("course_id", "title", "content", "position", "is_preview")
-         SELECT $1, seed.title, '', seed.position::integer, false
+        `INSERT INTO "course_lessons" ("course_id", "title", "content", "position", "is_preview", "duration_hours")
+         SELECT $1, seed.title, '', seed.position::integer, false, (0.5 + ((seed.position::integer - 1) % 4) * 0.25)
          FROM unnest($2::text[]) WITH ORDINALITY AS seed(title, position)
          ON CONFLICT ("course_id", "position") DO NOTHING`,
         [course.id, titles],

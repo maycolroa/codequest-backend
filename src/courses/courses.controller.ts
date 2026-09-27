@@ -32,6 +32,7 @@ import { CoursesService } from './courses.service';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { UserCourseProgress } from './entities/user-course-progress.entity';
 import { assertProfileAccess } from '../auth/utils/assert-profile-access';
+import { UpdateCourseProgressDto } from '../learning-paths/dto/update-course-progress.dto';
 
 @ApiTags('Courses')
 @ApiBearerAuth()
@@ -68,11 +69,29 @@ export class CoursesController {
     return this.coursesService.findGalaxy();
   }
 
+  @Get('users/:profileId/streak')
+  getStreak(@GetUser('id') authenticatedProfileId: string, @Param('profileId', ParseUUIDPipe) profileId: string) {
+    assertProfileAccess(authenticatedProfileId, profileId);
+    return this.coursesService.getStreak(profileId);
+  }
+
   @Get('users/:profileId/progress')
   @ApiOperation({ summary: 'Listar mis cursos inscritos y su avance' })
   findMyProgress(@GetUser('id') authenticatedProfileId: string, @Param('profileId', ParseUUIDPipe) profileId: string): Promise<UserCourseProgress[]> {
     assertProfileAccess(authenticatedProfileId, profileId);
     return this.coursesService.findMyProgress(profileId);
+  }
+
+  @Get('users/:profileId/courses/:id/lessons')
+  findLessonsWithProgress(@GetUser('id') authenticatedProfileId: string, @Param('profileId', ParseUUIDPipe) profileId: string, @Param('id', ParseUUIDPipe) courseId: string) {
+    assertProfileAccess(authenticatedProfileId, profileId);
+    return this.coursesService.findLessonsWithProgress(profileId, courseId);
+  }
+
+  @Patch('users/:profileId/courses/:courseId/lessons/:lessonId/progress')
+  updateLessonProgress(@GetUser('id') authenticatedProfileId: string, @Param('profileId', ParseUUIDPipe) profileId: string, @Param('lessonId', ParseUUIDPipe) lessonId: string, @Body() dto: UpdateCourseProgressDto) {
+    assertProfileAccess(authenticatedProfileId, profileId);
+    return this.coursesService.setLessonCompletion(profileId, lessonId, dto.completed, true);
   }
 
   @Post('users/:profileId/courses/:id/enroll')

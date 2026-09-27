@@ -31,6 +31,7 @@ import { CreateLearningPaths1726000000011 } from '../../learning-paths/migration
 import { UseLessonProgress1726000000012 } from '../../learning-paths/migrations/1726000000012-UseLessonProgress';
 import { SeedCourseLessons1726000000013 } from '../../courses/migrations/1726000000013-SeedCourseLessons';
 import { AddCourseCategoryToProgress1726000000014 } from '../../courses/migrations/1726000000014-AddCourseCategoryToProgress';
+import { AddLessonDurations1726000000015 } from '../../courses/migrations/1726000000015-AddLessonDurations';
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -60,6 +61,7 @@ const authDataSource = new DataSource({
     UseLessonProgress1726000000012,
     SeedCourseLessons1726000000013,
     AddCourseCategoryToProgress1726000000014,
+    AddLessonDurations1726000000015,
   ],
   synchronize: false,
   ssl:

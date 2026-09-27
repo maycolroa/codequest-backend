@@ -125,12 +125,30 @@ export class CoursesService {
     );
   }
 
-  findMyProgress(profileId: string): Promise<UserCourseProgress[]> {
-    return this.progressRepository.find({
-      where: { profileId },
-      relations: { course: true },
-      order: { updatedAt: 'DESC' },
+  async findMyProgress(profileId: string): Promise<UserCourseProgress[]> {
+    const progress = await this.progressRepository.find({ where: { profileId }, relations: { course: true }, order: { updatedAt: 'DESC' } });
+    await this.dataSource.transaction(async (manager) => {
+      for (const entry of progress) await this.recalculateCourseProgress(manager, entry.courseId, profileId);
     });
+    return this.progressRepository.find({ where: { profileId }, relations: { course: true }, order: { updatedAt: 'DESC' } });
+  }
+
+  async getStreak(profileId: string): Promise<{ currentStreak: number; activeDays: string[] }> {
+    const rows = await this.dataSource.query(
+      "SELECT DISTINCT (completed_at AT TIME ZONE 'America/Bogota')::date AS day FROM user_lesson_progress WHERE profile_id = $1 ORDER BY day DESC",
+      [profileId],
+    ) as Array<{ day: string }>;
+    const activeDays = rows.map(({ day }) => day);
+    const dateKey = (date: Date): string => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(date);
+    const today = new Date();
+    let currentStreak = 0;
+    for (let offset = 0; ; offset += 1) {
+      const day = new Date(today);
+      day.setDate(today.getDate() - offset);
+      if (!activeDays.includes(dateKey(day))) break;
+      currentStreak += 1;
+    }
+    return { currentStreak, activeDays };
   }
 
   async createLesson(
@@ -220,7 +238,9 @@ export class CoursesService {
       where: { profileId, lessonId: In(lessons.map((lesson) => lesson.id)) },
     }) : [];
     const completed = new Set(progress.map((item) => item.lessonId));
-    return lessons.map((lesson) => ({ ...lesson, completed: completed.has(lesson.id) }));
+    const sectionNames = ['Fundamentos', 'Construcción de APIs', 'Backend profesional', 'Producción'];
+    const sectionSize = Math.max(1, Math.ceil(lessons.length / sectionNames.length));
+    return lessons.map((lesson, index) => ({ ...lesson, section: sectionNames[Math.min(Math.floor(index / sectionSize), sectionNames.length - 1)], completed: completed.has(lesson.id) }));
   }
 
   setLessonCompletion(profileId: string, lessonId: string, completed: boolean, enrollIfNeeded = false): Promise<UserCourseProgress> {
