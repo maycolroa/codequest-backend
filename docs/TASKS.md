@@ -90,6 +90,9 @@
 - [x] Crear `CoursesService.getCategories()`
 - [x] Crear `CoursesService.getCatalogSummary()` para IA
 - [x] Crear `CoursesController` con Swagger completo
+- [x] Cargar títulos de módulos y temas como lecciones para los 62 cursos coincidentes
+- [x] Crear títulos de lecciones para los otros 18 cursos existentes
+- [x] Aplicar seed de 1.990 lecciones a los 80 cursos existentes
 - [ ] Probar endpoints con Swagger UI
 
 ### Galaxias 3D de cursos (spec 03)
@@ -102,11 +105,10 @@
 - [x] Aplicar las migraciones 0008 y 0009 en producción
 
 ### Módulo AI
-- [ ] Crear `AiModule` con `AiService`
-- [ ] Implementar `generateLearningPath()` con Claude API
-- [ ] Diseñar y probar el system prompt
-- [ ] Manejar errores de la API (rate limit, timeout)
-- [ ] Parsear y validar respuesta JSON de Claude
+- [x] Generar rutas por interés con Claude API desde `LearningPathsService`
+- [x] Crear prompt JSON para generar una ruta por interés
+- [x] Manejar errores de configuración, respuesta inválida y errores de la API
+- [x] Validar las rutas generadas contra el catálogo activo
 - [ ] Probar con diferentes perfiles de usuario
 
 ### Módulo Assessments
@@ -118,11 +120,11 @@
 - [ ] Probar flujo completo cuestionario → IA → DB
 
 ### Módulo Learning Paths
-- [ ] Crear `LearningPathsService.findAllByUser()` con % progreso
-- [ ] Crear `LearningPathsService.findOne()` con JOIN a cursos
-- [ ] Crear `LearningPathsService.toggleCourseProgress()`
-- [ ] Crear `LearningPathsService.remove()` con cascade
-- [ ] Crear `LearningPathsController` completo
+- [x] Crear `LearningPathsService.findAllByUser()`
+- [x] Crear `LearningPathsService.findOne()` con cursos
+- [x] Permitir marcar y desmarcar el progreso de cada lección incluida en una ruta
+- [x] Crear `LearningPathsService.remove()` con cascade
+- [x] Crear `LearningPathsController` para generar, listar, ver y eliminar rutas
 - [ ] Probar todos los endpoints
 
 ### Deploy

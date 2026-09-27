@@ -31,6 +31,8 @@ import { UpdateCourseLessonDto } from './dto/update-course-lesson.dto';
 import { CoursesService } from './courses.service';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { UserCourseProgress } from './entities/user-course-progress.entity';
+import { assertProfileAccess } from '../auth/utils/assert-profile-access';
+import { UpdateCourseProgressDto } from '../learning-paths/dto/update-course-progress.dto';
 
 @ApiTags('Courses')
 @ApiBearerAuth()
@@ -67,19 +69,40 @@ export class CoursesController {
     return this.coursesService.findGalaxy();
   }
 
-  @Get('my-progress')
+  @Get('users/:profileId/streak')
+  getStreak(@GetUser('id') authenticatedProfileId: string, @Param('profileId', ParseUUIDPipe) profileId: string) {
+    assertProfileAccess(authenticatedProfileId, profileId);
+    return this.coursesService.getStreak(profileId);
+  }
+
+  @Get('users/:profileId/progress')
   @ApiOperation({ summary: 'Listar mis cursos inscritos y su avance' })
-  findMyProgress(@GetUser('id') profileId: string): Promise<UserCourseProgress[]> {
+  findMyProgress(@GetUser('id') authenticatedProfileId: string, @Param('profileId', ParseUUIDPipe) profileId: string): Promise<UserCourseProgress[]> {
+    assertProfileAccess(authenticatedProfileId, profileId);
     return this.coursesService.findMyProgress(profileId);
   }
 
-  @Post(':id/enroll')
+  @Get('users/:profileId/courses/:id/lessons')
+  findLessonsWithProgress(@GetUser('id') authenticatedProfileId: string, @Param('profileId', ParseUUIDPipe) profileId: string, @Param('id', ParseUUIDPipe) courseId: string) {
+    assertProfileAccess(authenticatedProfileId, profileId);
+    return this.coursesService.findLessonsWithProgress(profileId, courseId);
+  }
+
+  @Patch('users/:profileId/courses/:courseId/lessons/:lessonId/progress')
+  updateLessonProgress(@GetUser('id') authenticatedProfileId: string, @Param('profileId', ParseUUIDPipe) profileId: string, @Param('lessonId', ParseUUIDPipe) lessonId: string, @Body() dto: UpdateCourseProgressDto) {
+    assertProfileAccess(authenticatedProfileId, profileId);
+    return this.coursesService.setLessonCompletion(profileId, lessonId, dto.completed, true);
+  }
+
+  @Post('users/:profileId/courses/:id/enroll')
   @ApiOperation({ summary: 'Inscribirme a un curso' })
   @ApiParam({ name: 'id', format: 'uuid' })
   enroll(
-    @GetUser('id') profileId: string,
+    @GetUser('id') authenticatedProfileId: string,
+    @Param('profileId', ParseUUIDPipe) profileId: string,
     @Param('id', ParseUUIDPipe) courseId: string,
   ): Promise<UserCourseProgress> {
+    assertProfileAccess(authenticatedProfileId, profileId);
     return this.coursesService.enroll(profileId, courseId);
   }
 
@@ -121,13 +144,15 @@ export class CoursesController {
     return this.coursesService.removeLesson(lessonId);
   }
 
-  @Post('lessons/:lessonId/complete')
+  @Post('users/:profileId/lessons/:lessonId/complete')
   @ApiOperation({ summary: 'Registrar una lección completada y recalcular el avance' })
   @ApiParam({ name: 'lessonId', format: 'uuid' })
   completeLesson(
-    @GetUser('id') profileId: string,
+    @GetUser('id') authenticatedProfileId: string,
+    @Param('profileId', ParseUUIDPipe) profileId: string,
     @Param('lessonId', ParseUUIDPipe) lessonId: string,
   ): Promise<UserCourseProgress> {
+    assertProfileAccess(authenticatedProfileId, profileId);
     return this.coursesService.completeLesson(profileId, lessonId);
   }
 

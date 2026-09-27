@@ -6,6 +6,8 @@ import { AuthModule } from './auth/auth.module';
 import { getDatabaseConfig } from './auth/config/database.config';
 import { CoursesModule } from './courses/courses.module';
 import { AssessmentsModule } from './assessments/assessments.module';
+import { LearningPathsModule } from './learning-paths/learning-paths.module';
+import { DeviModule } from './devi/devi.module';
 
 
 @Module({
@@ -18,6 +20,8 @@ import { AssessmentsModule } from './assessments/assessments.module';
     AuthModule,
     CoursesModule,
     AssessmentsModule,
+    LearningPathsModule,
+    DeviModule,
   ],
   controllers: [],
   providers: [],

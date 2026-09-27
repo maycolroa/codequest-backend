@@ -13,6 +13,7 @@ export class CreateCourseLessonsAndAutomaticProgress1726000000007
         "video_url" character varying,
         "position" integer NOT NULL,
         "is_preview" boolean NOT NULL DEFAULT false,
+        "duration_hours" numeric(4,2) NOT NULL DEFAULT 0.5,
         "created_at" TIMESTAMP NOT NULL DEFAULT now(),
         "updated_at" TIMESTAMP NOT NULL DEFAULT now(),
         CONSTRAINT "UQ_course_lessons_course_position" UNIQUE ("course_id", "position"),

@@ -12,6 +12,7 @@ import {
 
 import { Profile } from '../../auth/entities/profile.entity';
 import { CourseProgressStatus } from '../enums/course-progress-status.enum';
+import { CourseCategory } from '../enums/course-category.enum';
 import { Course } from './course.entity';
 
 @Entity('user_course_progress')
@@ -34,6 +35,9 @@ export class UserCourseProgress {
   @ManyToOne(() => Course, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'course_id' })
   course: Course;
+
+  @Column({ name: 'course_category', type: 'varchar' })
+  courseCategory: CourseCategory;
 
   @Column({
     type: 'varchar',

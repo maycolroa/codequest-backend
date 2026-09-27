@@ -39,6 +39,9 @@ export class CourseLesson {
   @Column({ name: 'is_preview', default: false })
   isPreview: boolean;
 
+  @Column({ name: 'duration_hours', type: 'numeric', precision: 4, scale: 2, default: 0.5 })
+  durationHours: number;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
