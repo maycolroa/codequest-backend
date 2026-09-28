@@ -526,12 +526,6 @@ Las migrations controlan los cambios al schema sin perder datos.
 ### Comandos
 
 ```bash
-# Generar migration automática desde cambios en entidades
-npm run migration:generate -- src/migrations/NombreCambio
-
-# Crear migration vacía (para datos/seeds)
-npm run migration:create -- src/migrations/SeedCourses
-
 # Ejecutar todas las migrations pendientes
 npm run migration:run
 
@@ -572,50 +566,42 @@ El proyecto tiene **16 migraciones numeradas del 0000 al 0015**, repartidas por 
 ```json
 {
   "scripts": {
-    "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/data-source.ts",
-    "migration:create":   "typeorm-ts-node-commonjs migration:create",
-    "migration:run":      "typeorm-ts-node-commonjs migration:run -d src/config/data-source.ts",
-    "migration:revert":   "typeorm-ts-node-commonjs migration:revert -d src/config/data-source.ts",
-    "migration:show":     "typeorm-ts-node-commonjs migration:show -d src/config/data-source.ts"
+    "migration:run":    "typeorm-ts-node-commonjs migration:run -d src/auth/config/data-source.ts",
+    "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/auth/config/data-source.ts",
+    "migration:show":   "typeorm-ts-node-commonjs migration:show -d src/auth/config/data-source.ts"
   }
 }
 ```
 
+> No hay scripts `migration:generate` ni `migration:create`. Las migrations se escriben a mano y **deben registrarse explícitamente** en el array `migrations` de `src/auth/config/data-source.ts` (el CLI no usa globs).
+
 ### DataSource para CLI
 
-```typescript
-// src/config/data-source.ts
-import { DataSource } from 'typeorm'
-import * as dotenv from 'dotenv'
-dotenv.config()
-
-export default new DataSource({
-  type: 'postgres',
-  url: process.env.DATABASE_URL,
-  entities: ['src/**/*.entity.ts'],
-  migrations: ['src/migrations/*.ts'],
-  ssl: { rejectUnauthorized: false },
-})
-```
+`src/auth/config/data-source.ts` lee `DATABASE_URL` desde `.env` (vía `dotenv/config`) e importa cada entidad y migration de forma explícita. Usa SSL solo cuando `NODE_ENV=production`.
 
 ### Flujo de trabajo con migrations
 
 ```
-Cambiar entidad → npm run migration:generate → revisar migration → npm run migration:run
+Crear archivo en <módulo>/migrations → registrarlo en data-source.ts → npm run migration:run
 ```
 
-En **producción** (DigitalOcean), las migrations corren automáticamente al iniciar el contenedor:
+En **producción** las migrations **no** corren automáticamente: el `Dockerfile` de producción solo ejecuta `node dist/main`. Hay que correrlas manualmente contra la BD de DigitalOcean:
 
-```dockerfile
-CMD ["sh", "-c", "node dist/node_modules/typeorm/cli.js migration:run -d dist/config/data-source.js && node dist/main"]
+```bash
+DATABASE_URL="<connection-string-de-produccion>" NODE_ENV=production npm run migration:run
 ```
 
 ---
 
 ## API Reference
 
-Base URL: `https://tu-backend.ondigitalocean.app/api/v1`
-Documentación interactiva: `/docs` (Swagger UI)
+| Entorno                  | Base URL de la API                                        | Swagger UI                                         |
+| ------------------------ | --------------------------------------------------------- | -------------------------------------------------- |
+| Local (`npm run start:dev`) | `http://localhost:3000/api/v1`                          | `http://localhost:3000/docs`                       |
+| Local (Docker Compose)   | `http://localhost:3001/api/v1` (o el `API_PORT` que definas) | `http://localhost:3001/docs`                    |
+| Producción               | `https://codequest-backend-7ogey.ondigitalocean.app/api/v1` | `https://codequest-backend-7ogey.ondigitalocean.app/docs` |
+
+> Swagger se monta en `/docs`, **fuera** del prefijo `/api/v1`.
 
 ### Auth
 
@@ -623,7 +609,16 @@ Documentación interactiva: `/docs` (Swagger UI)
 | ------- | -------------------------- | ---- | ----------------------------- |
 | GET     | `/auth/discord`          | —   | Iniciar login con Discord     |
 | GET     | `/auth/discord/callback` | —   | Callback OAuth2 → genera JWT |
+| POST    | `/auth/register`         | —   | Crear cuenta con correo y contraseña |
+| POST    | `/auth/login`            | —   | Login con correo y contraseña → JWT |
+| POST    | `/auth/password/change`  | JWT  | Cambiar contraseña de la cuenta local |
 | GET     | `/auth/me`               | JWT  | Perfil del usuario actual     |
+
+### Devi
+
+| Método | Ruta         | Auth | Descripción                                   |
+| ------- | ------------ | ---- | ---------------------------------------------- |
+| POST    | `/devi/ask`  | JWT  | Enviar una pregunta al agente Devi (OpenAI)   |
 
 ### Courses
 
@@ -662,32 +657,27 @@ Documentación interactiva: `/docs` (Swagger UI)
 
 ## Variables de entorno
 
-```bash
-# ── App ──────────────────────────────────────────────
-PORT=3000
-NODE_ENV=production
-FRONTEND_URL=https://codequest-frontend-m26va.ondigitalocean.app
+La plantilla está en `.env.example`. **Nunca** subas el `.env` con valores reales al repositorio.
 
-# ── Base de datos (DigitalOcean PostgreSQL) ──────────
-# Obtener en: DigitalOcean → Databases → tu cluster → Connection String
-DATABASE_URL=postgresql://usuario:password@host:25060/defaultdb?sslmode=require
-
-# ── JWT ──────────────────────────────────────────────
-JWT_SECRET=cadena-super-secreta-minimo-64-caracteres
-# Generar con: openssl rand -base64 64
-JWT_EXPIRES_IN=7d
-
-# ── Discord OAuth2 ───────────────────────────────────
-# Crear en: https://discord.com/developers/applications
-DISCORD_CLIENT_ID=1234567890123456789
-DISCORD_CLIENT_SECRET=AbCdEfGhIjKlMnOpQrSt
-DISCORD_CALLBACK_URL=https://codequest-backend-7ogey.ondigitalocean.app/api/v1/auth/discord/callback
-DEVTALLES_GUILD_ID=1130900724499365958
-
-# ── Anthropic Claude API ─────────────────────────────
-# Obtener en: https://console.anthropic.com
-ANTHROPIC_API_KEY=sk-ant-api03-...
-```
+| Variable                | Obligatoria | Descripción                                                                                           | Dónde obtenerla                                   |
+| ----------------------- | ----------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| `PORT`                  | No (3000)   | Puerto en el que escucha Nest.                                                                         | —                                                 |
+| `API_PORT`              | No (3001)   | Puerto del host donde Docker Compose publica la API (solo Compose).                                    | —                                                 |
+| `NODE_ENV`              | Sí          | `development` o `production`. En `production` el CLI de migrations usa SSL.                            | —                                                 |
+| `FRONTEND_URL`          | Sí          | Origen permitido por CORS y destino del redirect tras el login con Discord.                           | URL del frontend (local: `http://localhost:5173`) |
+| `DATABASE_URL`          | Sí          | Connection string de PostgreSQL `postgresql://<usuario>:<password>@<host>:<puerto>/<db>`.              | Local: la del `docker-compose.yml` · Prod: DigitalOcean → Databases → Connection String |
+| `POSTGRES_USER`         | Sí (Compose) | Usuario que crea el contenedor de PostgreSQL local.                                                   | Lo eliges tú                                      |
+| `POSTGRES_PASSWORD`     | Sí (Compose) | Contraseña del PostgreSQL local.                                                                      | Lo eliges tú                                      |
+| `POSTGRES_DB`           | Sí (Compose) | Nombre de la base de datos local.                                                                     | Lo eliges tú                                      |
+| `JWT_SECRET`            | Sí          | Clave para firmar los JWT. La app no arranca sin ella.                                                 | `openssl rand -base64 64`                         |
+| `JWT_EXPIRES_IN`        | No (`7d`)   | Tiempo de expiración de los JWT.                                                                       | —                                                 |
+| `DISCORD_CLIENT_ID`     | Sí          | Client ID de la app OAuth2 de Discord. La app no arranca sin ella.                                     | discord.com/developers/applications → OAuth2      |
+| `DISCORD_CLIENT_SECRET` | Sí          | Client secret de la app OAuth2 de Discord.                                                             | discord.com/developers/applications → OAuth2      |
+| `DISCORD_CALLBACK_URL`  | Sí          | URL de callback registrada en Discord (`<base-url-api>/auth/discord/callback`).                        | Debe coincidir exactamente con la de Discord      |
+| `OPENAI_API_KEY`        | Sí          | API key usada por el módulo Devi. La app **no arranca** sin ella.                                      | platform.openai.com → API keys                    |
+| `OPENAI_AGENT_ID`       | Sí          | ID del agente de OpenAI que responde en `/devi/ask`. La app **no arranca** sin ella.                   | platform.openai.com                               |
+| `DEVTALLES_GUILD_ID`    | No          | ID del servidor de Discord de DevTalles. Actualmente no la lee el código.                              | Discord (modo desarrollador → copiar ID)          |
+| `ANTHROPIC_API_KEY`     | No          | Reservada para generación con Claude. La generación de rutas actual no la usa.                        | console.anthropic.com → API Keys                  |
 
 ---
 
@@ -699,26 +689,41 @@ ANTHROPIC_API_KEY=sk-ant-api03-...
 
 ### Requisitos previos
 
-Antes de empezar verifica que tienes instalado:
+| Herramienta    | Versión                  | Necesaria para                                           |
+| -------------- | ------------------------ | -------------------------------------------------------- |
+| Node.js        | `>=22.22.3 <25`          | Correr la API fuera de Docker (`npm run start:dev`)      |
+| npm            | `>=10.9.3 <12`           | Instalar dependencias y correr scripts                   |
+| Docker + Compose | 24+                    | Levantar PostgreSQL (y opcionalmente la API) en local    |
+| PostgreSQL     | 17                       | Lo provee Docker (`postgres:17-alpine`); solo instálalo si no usas Docker |
+| Git            | cualquiera               | Clonar el repositorio                                    |
 
 ```bash
-docker --version  # debe mostrar Docker version 24.x.x o superior
+node --version           # v22.22.3 o superior
+npm --version            # 10.9.3 o superior
+docker --version         # Docker version 24.x.x o superior
 docker compose version
 ```
 
 Si algo falta:
 
+- **Node.js:** https://nodejs.org (o `nvm install 22`)
 - **Docker:** https://docs.docker.com/get-docker
 
-> Node.js, npm y NestJS se ejecutan dentro del contenedor; no necesitas instalarlos en tu equipo para levantar la API.
+> Si levantas todo con Docker Compose (opción A), Node.js corre dentro del contenedor y no es obligatorio en tu equipo.
 
 ---
 
 ### Paso 1 — Clonar el repositorio
 
 ```bash
-git clone https://github.com/tu-equipo/codequest-backend.git
+git clone https://github.com/maycolroa/codequest-backend.git
 cd codequest-backend
+```
+
+### Paso 1.1 — Instalar dependencias (solo si corres la API fuera de Docker)
+
+```bash
+npm ci
 ```
 
 ---
@@ -740,109 +745,81 @@ code .env
 nano .env
 ```
 
-**Variables que DEBES rellenar para desarrollo local:**
+Rellena **todas** las variables marcadas como obligatorias en la tabla de [Variables de entorno](#variables-de-entorno). Sin `JWT_SECRET`, `DISCORD_*`, `FRONTEND_URL`, `OPENAI_API_KEY` u `OPENAI_AGENT_ID` la API no arranca.
 
-| Variable                  | Dónde obtenerla                                                  |
-| ------------------------- | ----------------------------------------------------------------- |
-| `DATABASE_URL`          | Se genera automáticamente con Docker (ver Paso 4)                |
-| `JWT_SECRET`            | Correr:`openssl rand -base64 64`                                |
-| `DISCORD_CLIENT_ID`     | discord.com/developers/applications → tu app → OAuth2           |
-| `DISCORD_CLIENT_SECRET` | discord.com/developers/applications → tu app → OAuth2           |
-| `DISCORD_CALLBACK_URL`  | Dejar como:`http://localhost:3000/api/v1/auth/discord/callback` |
-| `ANTHROPIC_API_KEY`     | console.anthropic.com → API Keys                                 |
+Para desarrollo local:
 
-**Ejemplo de `.env` para desarrollo local:**
-
-```bash
-PORT=3000
-NODE_ENV=development
-FRONTEND_URL=http://localhost:5173
-
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/codequest
-
-JWT_SECRET=mi-clave-super-secreta-de-al-menos-64-caracteres-aqui
-JWT_EXPIRES_IN=7d
-
-DISCORD_CLIENT_ID=123456789012345678
-DISCORD_CLIENT_SECRET=AbCdEfGhIjKlMnOpQrStUvWxYz123456
-DISCORD_CALLBACK_URL=http://localhost:3000/api/v1/auth/discord/callback
-DEVTALLES_GUILD_ID=1130900724499365958
-
-ANTHROPIC_API_KEY=sk-ant-api03-...
-```
+- `DATABASE_URL` debe apuntar a `localhost:5432` con los mismos `POSTGRES_USER`/`POSTGRES_PASSWORD`/`POSTGRES_DB` (Compose la sobrescribe dentro del contenedor de la API).
+- `DISCORD_CALLBACK_URL` debe ser `http://localhost:3000/api/v1/auth/discord/callback` (o `3001` si usas la API en Docker).
 
 ---
 
-### Paso 3 — Levantar API y PostgreSQL con Docker
+### Paso 3 — Levantar la base de datos y la API
+
+Elige **una** de las dos opciones.
+
+**Opción A — Todo en Docker (API + PostgreSQL)**
 
 ```bash
-# Construye la API con Node 22.22.3 y levanta ambos servicios.
-# Docker publica la API en 3001 para no ocupar el 3000 local.
 docker compose up --build -d
+docker ps   # Debe mostrar: codequest-api-dev y codequest-postgres-dev
 ```
 
-Verificar que está corriendo:
+La API corre con `npm run start:dev` (hot reload) dentro del contenedor y se publica en `http://localhost:3001`. Logs: `docker compose logs -f api`.
+
+**Opción B — PostgreSQL en Docker, API con Node local**
 
 ```bash
-docker ps
-# Debe mostrar: codequest-api-dev y codequest-postgres-dev
+docker compose up -d postgres_db_dev   # solo la base de datos, en localhost:5432
 ```
 
-> 💡 La primera vez descarga la imagen de PostgreSQL (~80MB). Las siguientes veces es instantáneo.
+> 💡 La primera vez descarga la imagen de PostgreSQL. Las siguientes veces es instantáneo.
 
 ---
 
 ### Paso 4 — Ejecutar las migrations
 
 ```bash
-# Crea todas las tablas en la base de datos
+# Opción A (dentro del contenedor)
 docker compose exec api npm run migration:run
+
+# Opción B (desde tu equipo)
+npm run migration:run
 ```
 
-Debes ver algo como:
-
-```
-Running migrations...
-Migration CreateProfiles has been executed successfully.
-Migration CreateCourses has been executed successfully.
-Migration CreateAssessments has been executed successfully.
-Migration CreateLearningPaths has been executed successfully.
-Migration CreateUserProgress has been executed successfully.
-Migration SeedCourses has been executed successfully.
-```
-
-Si hay error de conexión, verifica que Docker está corriendo (`docker ps`).
+Crea todas las tablas y carga los seeds (cursos, lecciones y preguntas). Para ver el estado: `npm run migration:show`.
 
 ---
 
-La API ya queda iniciada en modo desarrollo y con hot reload. Para ver sus logs:
+### Paso 5 — Iniciar el servidor (solo opción B)
 
 ```bash
-docker compose logs -f api
+npm run start:dev
 ```
+
+En la opción A el servidor ya está corriendo desde el Paso 3.
 
 ---
 
-### Paso 5 — Verificar que todo funciona
+### Paso 6 — Verificar que todo funciona
 
-Abre el navegador y ve a:
+Abre Swagger UI en el navegador:
 
 ```
-http://localhost:3001/docs
+http://localhost:3000/docs   # opción B
+http://localhost:3001/docs   # opción A
 ```
 
-Debes ver la documentación **Swagger UI** con todos los endpoints del proyecto.
-
-Prueba el endpoint de salud:
+Prueba un endpoint público:
 
 ```bash
-curl http://localhost:3000/api/v1/health
-# Respuesta: { "status": "ok" }
+curl -i http://localhost:3000/api/v1/auth/discord
+# Respuesta: 302 con redirección a discord.com
 ```
 
 ---
 
-### Paso 6 — Configurar Discord OAuth2 (para probar el login)
+### Paso 7 — Configurar Discord OAuth2 (para probar el login)
 
 1. Ir a [discord.com/developers/applications](https://discord.com/developers/applications)
 2. Seleccionar tu aplicación → **OAuth2** → **Redirects**
@@ -855,23 +832,28 @@ curl http://localhost:3000/api/v1/health
 ### Comandos útiles del día a día
 
 ```bash
-# Detener API y PostgreSQL
-docker compose down
+# Servidor
+npm run start:dev          # desarrollo con hot reload
+npm run start:debug        # desarrollo + inspector
+npm run build              # compilar a dist/
+npm run start:prod         # correr dist/main
 
-# Ver logs de la API
-docker compose logs -f api
-
-# Revertir última migration
-docker compose exec api npm run migration:revert
-
-# Ver estado de migrations
+# Migrations
+npm run migration:run
+npm run migration:revert
 npm run migration:show
 
-# Compilar para producción
-npm run build
-
-# Verificar tipos TypeScript sin compilar
+# Calidad
+npm run lint
+npm test
+npm run test:e2e
 npx tsc --noEmit
+
+# Docker
+docker compose up --build -d
+docker compose logs -f api
+docker compose exec api npm run migration:run
+docker compose down
 ```
 
 ---
@@ -882,8 +864,8 @@ npx tsc --noEmit
 
 ```bash
 # PostgreSQL no está corriendo
-docker compose up -d postgres
-docker ps  # verificar que aparece codequest-db
+docker compose up -d postgres_db_dev
+docker ps  # verificar que aparece codequest-postgres-dev
 ```
 
 **❌ Error: `Cannot find module '@nestjs/config'`**
@@ -909,12 +891,16 @@ http://localhost:3000/api/v1/auth/discord/callback
 (sin slash al final, con /api/v1)
 ```
 
-**❌ Error: `Migration not found`**
+**❌ Error: `OPENAI_API_KEY y OPENAI_AGENT_ID son obligatorias para Devi`**
 
-```bash
-# Compilar primero y luego correr migrations
-npm run build
-npm run migration:run
+```
+Agregar ambas variables al .env (ver Variables de entorno).
+```
+
+**❌ Una migration nueva no se ejecuta**
+
+```
+Registrarla en el array `migrations` de src/auth/config/data-source.ts.
 ```
 
 ---
@@ -961,14 +947,14 @@ Agregar variables de entorno en App Platform:
 DATABASE_URL          → connection string de tu PostgreSQL DO
 PORT                  → 3000
 NODE_ENV              → production
-FRONTEND_URL          → https://codequest-frontend-m26va.ondigitalocean.app
+FRONTEND_URL          → URL pública del frontend
 JWT_SECRET            → cadena aleatoria segura
 JWT_EXPIRES_IN        → 7d
 DISCORD_CLIENT_ID     → de Discord Developer Portal
 DISCORD_CLIENT_SECRET → de Discord Developer Portal
-DISCORD_CALLBACK_URL  → https://codequest-backend-7ogey.ondigitalocean.app/api/v1/auth/discord/callback
-DEVTALLES_GUILD_ID    → 1130900724499365958
-ANTHROPIC_API_KEY     → de console.anthropic.com
+DISCORD_CALLBACK_URL  → https://<backend>.ondigitalocean.app/api/v1/auth/discord/callback
+OPENAI_API_KEY        → de platform.openai.com
+OPENAI_AGENT_ID       → ID del agente Devi en OpenAI
 ```
 
 ### CI/CD — GitHub Actions + Autodeploy
@@ -997,7 +983,7 @@ discord.com/developers/applications
 ```
 [ ] PostgreSQL creado en DigitalOcean
 [ ] Migrations ejecutadas correctamente
-[ ] Backend responde en /api/v1/docs (Swagger visible)
+[ ] Backend responde en /docs (Swagger visible)
 [ ] GET /api/v1/auth/discord redirige a Discord correctamente
 [ ] DISCORD_CALLBACK_URL apunta a la URL real de producción
 [ ] Frontend apunta al backend de producción en VITE_API_URL
